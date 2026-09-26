@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>QuickStash</AssemblyName>
     <RootNamespace>QuickStash</RootNamespace>
-    <Version>0.6.0</Version>
+    <Version>0.6.1</Version>
     <Description>Graveyard Keeper 2: one key moves stackable backpack items into nearby containers that already hold them.</Description>
     <PluginOutDir>$(BepInExDir)\plugins\QuickStash</PluginOutDir>
   </PropertyGroup>
@@ -31,10 +31,6 @@
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>$(ManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
@@ -84,13 +80,9 @@
       <HintPath>$(ManagedDir)\LazyBearTechnology.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="Rewired_Core">
-      <HintPath>$(ManagedDir)\Rewired_Core.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
   </ItemGroup>
 
-  <Target Name="CopyToPlugins" AfterTargets="Build">
+  <Target Name="CopyToPlugins" AfterTargets="Build" Condition="Exists('$(BepInExDir)')">
     <MakeDir Directories="$(PluginOutDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginOutDir)" />
     <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PluginOutDir)" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />

@@ -1,22 +1,16 @@
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace QuickStash
 {
-    /// <summary>A world object with an inventory, as seen from the player.</summary>
+    /// <summary>A stash target: a world object with an inventory, with its distance to the player.</summary>
     internal sealed class ContainerInfo
     {
         public WgoData Wgo;
         public float Distance;
-        /// <summary>Listed by the player's current WorldZoneData.</summary>
-        public bool InZone;
-        /// <summary>Found by the radius scan over the world cache.</summary>
-        public bool InRadius;
 
         public string Id => Wgo.id;
         public string Uid => Wgo.UniqueId != null ? Wgo.UniqueId.ToString() : "-";
-        public WGODef Def => Wgo.Definition;
     }
 
     internal static class ContainerFinder
@@ -88,20 +82,20 @@ namespace QuickStash
         }
 
         /// <summary>
-        /// Stash targets: zone containers with <c>OpenInMultiInventory</c> (the chest window's "storage" panel filter),
-        /// deduplicated by shared inventory (<c>refToOtherWgoInventory</c>), sorted by distance.
-        /// Falls back to a radius scan when the player is not inside a zone.
+        /// Stash targets: containers of the player's current zone with <c>OpenInMultiInventory</c> (the chest window's
+        /// "storage" panel filter), deduplicated by shared inventory (<c>refToOtherWgoInventory</c>), nearest first.
+        /// The zone is used only when it is a container zone (<c>WorldZoneData.IsContainer</c>): SimpleNotContainer zones are
+        /// assigned as CurrentWorldZoneData too but PrepareForGame clears their lists. Otherwise, or with no zone, the
+        /// radius scan is used.
         /// </summary>
         public static List<ContainerInfo> FindTargets(PlayerData pd, float fallbackRadius, bool includeConveyorChests, out string source)
         {
             Vector3 pos = pd.position.Value;
             WorldZoneData zone = pd.CurrentWorldZoneData;
             List<WgoData> candidates;
-            bool fromZone;
 
-            if (zone != null)
+            if (zone != null && zone.IsContainer)
             {
-                fromZone = true;
                 candidates = ZoneWgosPrepared(zone);
                 source = "zone.MultiInventoryWgoDatas";
                 if (candidates.Count == 0)
@@ -112,31 +106,32 @@ namespace QuickStash
             }
             else
             {
-                fromZone = false;
                 candidates = RadiusWgos(pd.currentGameSceneId, pos, fallbackRadius);
-                source = "radius " + fallbackRadius;
+                source = zone == null ? "radius " + fallbackRadius + " (no zone)" : "radius " + fallbackRadius + " (zone " + zone.id + " is not a container zone)";
             }
 
-            var seen = new HashSet<Inventory>(RefEq<Inventory>.Instance);
-            var result = new List<ContainerInfo>();
+            // nearest first BEFORE the shared-inventory dedup, so the retained container (bubble anchor, log id) is the closest one
+            var sorted = new List<ContainerInfo>();
             foreach (var w in candidates)
             {
                 if (!HasInventory(w)) continue;
                 if (!w.Definition.OpenInMultiInventory) continue;
+                // Deliberate deviation from vanilla MultiInventory(zone): hidden/temporary objects are skipped here as in the radius scan.
+                if (w.IsHidden || w.isTempObject) continue;
                 if (!includeConveyorChests && IsConveyorChest(w.Definition)) continue;
-                var inv = w.Inventory;
-                if (inv == null || !seen.Add(inv)) continue;
-                result.Add(new ContainerInfo { Wgo = w, Distance = Distance(w, pos), InZone = fromZone, InRadius = !fromZone });
+                sorted.Add(new ContainerInfo { Wgo = w, Distance = Distance(w, pos) });
             }
-            result.Sort((a, b) => a.Distance.CompareTo(b.Distance));
-            return result;
-        }
+            sorted.Sort((a, b) => a.Distance.CompareTo(b.Distance));
 
-        private sealed class RefEq<T> : IEqualityComparer<T> where T : class
-        {
-            public static readonly RefEq<T> Instance = new RefEq<T>();
-            public bool Equals(T x, T y) => ReferenceEquals(x, y);
-            public int GetHashCode(T obj) => RuntimeHelpers.GetHashCode(obj);
+            var seen = new HashSet<Inventory>();   // Inventory does not override equality: reference semantics
+            var result = new List<ContainerInfo>();
+            foreach (var c in sorted)
+            {
+                var inv = c.Wgo.Inventory;
+                if (inv == null || !seen.Add(inv)) continue;
+                result.Add(c);
+            }
+            return result;
         }
     }
 }

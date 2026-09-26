@@ -60,21 +60,34 @@ namespace QuickStash
                 summary.Append("zone=" + (zone == null ? "null" : zone.id));
             });
 
+            // discovery (each call isolated so one throw never prevents the dump from being written)
+            var prepared = new List<WgoData>();
+            var fromGuids = new List<WgoData>();
+            var radius = new List<WgoData>();
+            var targets = new List<ContainerInfo>();
+            string targetSource = "n/a";
+            var discoveryErrors = new List<string>();
+            try { prepared = ContainerFinder.ZoneWgosPrepared(zone); } catch (Exception e) { discoveryErrors.Add("ZoneWgosPrepared: " + e); }
+            try { fromGuids = ContainerFinder.ZoneWgosFromGuids(zone); } catch (Exception e) { discoveryErrors.Add("ZoneWgosFromGuids: " + e); }
+            try { radius = ContainerFinder.RadiusWgos(pd.currentGameSceneId, pos, fallbackRadius); } catch (Exception e) { discoveryErrors.Add("RadiusWgos: " + e); }
+            try { targets = ContainerFinder.FindTargets(pd, fallbackRadius, includeConveyorChests, out targetSource); } catch (Exception e) { discoveryErrors.Add("FindTargets: " + e); }
+            if (discoveryErrors.Count > 0)
+            {
+                sb.AppendLine("!! discovery errors:");
+                foreach (var err in discoveryErrors) sb.AppendLine("  " + err);
+                sb.AppendLine();
+            }
+
             // 2. zone containers
-            var prepared = ContainerFinder.ZoneWgosPrepared(zone);
-            var fromGuids = ContainerFinder.ZoneWgosFromGuids(zone);
             var zoneSet = new Dictionary<string, WgoData>();
             var preparedIds = new HashSet<string>();
             var guidIds = new HashSet<string>();
             foreach (var w in prepared) { zoneSet[Key(w)] = w; preparedIds.Add(Key(w)); }
             foreach (var w in fromGuids) { zoneSet[Key(w)] = w; guidIds.Add(Key(w)); }
 
-            var radius = ContainerFinder.RadiusWgos(pd.currentGameSceneId, pos, fallbackRadius);
             var radiusIds = new HashSet<string>();
             foreach (var w in radius) radiusIds.Add(Key(w));
 
-            string targetSource;
-            var targets = ContainerFinder.FindTargets(pd, fallbackRadius, includeConveyorChests, out targetSource);
             var targetIds = new HashSet<string>();
             foreach (var t in targets) targetIds.Add(Key(t.Wgo));
 

@@ -7,18 +7,16 @@ using UnityEngine.UI;
 
 namespace QuickStash
 {
-    /// <summary>One stashed item: id, moved count, star quality (or -1).</summary>
+    /// <summary>One stashed item: id and moved count (the star badge comes from the item definition).</summary>
     public sealed class StashBubbleCell
     {
         public string ItemId;
         public int Count;
-        public int Quality;
 
-        public StashBubbleCell(string itemId, int count, int quality)
+        public StashBubbleCell(string itemId, int count)
         {
             ItemId = itemId;
             Count = count;
-            Quality = quality;
         }
     }
 
@@ -42,14 +40,16 @@ namespace QuickStash
     /// </summary>
     public sealed class StashBubbleWidget : LazyWidget<StashBubbleWidgetData>, IBubbleLayoutAlwaysActive
     {
+        /// <summary>Name given to the UIItemCell GameObject inside the frame template, so instances can find it without a type scan.</summary>
+        public const string CellObjectName = "QuickStash.Cell";
+
         /// <summary>Shared inactive frame template under the holder (outside this hierarchy, so it is not cloned with the widget).</summary>
         public GameObject cellFrameTemplate;
         public GridLayoutGroup grid;
         public LayoutElement layoutElement;
         public RectTransform rectTransform;
-        /// <summary>UICraftHintWidget.defaultLayoutSize / bigLayoutSize of the prefab.</summary>
+        /// <summary>UICraftHintWidget.defaultLayoutSize of the prefab.</summary>
         public Vector2 frameSize;
-        public Vector2 bigFrameSize;
 
         private readonly List<RectTransform> slots = new List<RectTransform>();
         private readonly List<RectTransform> frames = new List<RectTransform>();
@@ -58,7 +58,31 @@ namespace QuickStash
         /// <summary>Layout actually used by the most recent Redraw (for the diagnostics dump).</summary>
         public static string LastLayoutInfo = "none yet";
 
+        private static bool redrawFailureLogged;
+
+        /// <summary>
+        /// Runs inside the game's bubble flush (UIObjectBubbleManager.FlushPendingDisplays), so it must never throw:
+        /// on failure the widget is left empty and the error is logged once.
+        /// </summary>
         public override void Redraw()
+        {
+            try
+            {
+                RedrawUnsafe();
+            }
+            catch (Exception e)
+            {
+                for (int i = 0; i < slots.Count; i++)
+                    if (slots[i] != null) slots[i].gameObject.SetActive(false);
+                if (!redrawFailureLogged)
+                {
+                    redrawFailureLogged = true;
+                    Plugin.Log.LogDebug("StashBubbleWidget.Redraw failed (widget left empty): " + e);
+                }
+            }
+        }
+
+        private void RedrawUnsafe()
         {
             if (data == null || grid == null || cellFrameTemplate == null) return;
             List<StashBubbleCell> items = data.Cells;
@@ -153,10 +177,23 @@ namespace QuickStash
                 frameGo.name = "CellFrame";
                 frameGo.SetActive(true);
 
+                Transform cellTf = FindByName(frameGo.transform, CellObjectName);
                 slots.Add(slot);
                 frames.Add(frameGo.GetComponent<RectTransform>());
-                cells.Add(frameGo.GetComponentInChildren<UIItemCell>(true));
+                cells.Add(cellTf != null ? cellTf.GetComponent<UIItemCell>() : null);
             }
+        }
+
+        internal static Transform FindByName(Transform root, string name)
+        {
+            if (root == null) return null;
+            if (root.name == name) return root;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                Transform found = FindByName(root.GetChild(i), name);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         /// <summary>
@@ -175,11 +212,6 @@ namespace QuickStash
             cell.SetNativeSizeForIcon();
         }
 
-        public override void Hide()
-        {
-            base.Hide();
-        }
-
         protected override void TestDraw()
         {
         }
@@ -193,31 +225,64 @@ namespace QuickStash
     /// </summary>
     internal static class StashBubbleTemplate
     {
+        internal enum BuildState { NotBuilt, Built, Failed }
+
         private static GameObject holder;
         private static StashBubbleWidget template;
-        private static string failure;
 
-        public static bool IsBuilt => template != null;
-        public static string Status => template != null ? "built" : failure != null ? "failed(" + failure + ")" : "not built yet";
+        public static BuildState State { get; private set; } = BuildState.NotBuilt;
+        public static string FailureReason { get; private set; }
+
+        public static string Status
+        {
+            get
+            {
+                switch (State)
+                {
+                    case BuildState.Built: return "built";
+                    case BuildState.Failed: return "failed(" + FailureReason + ")";
+                    default: return "not built yet";
+                }
+            }
+        }
 
         /// <summary>true when the template is registered. Never touches singletons before the bubble manager exists.</summary>
         public static bool EnsureBuilt()
         {
-            if (template != null) return true;
-            if (failure != null) return false;                       // decided; do not retry every stash
+            if (State == BuildState.Built) return true;
+            if (State == BuildState.Failed) return false;               // decided; do not retry every stash
             if (UIObjectBubbleManager.Instance == null) return false;   // UI not up yet; try again later
 
             try
             {
                 Build();
+                State = BuildState.Built;
                 Plugin.Log.LogInfo("Bubble template built from UICraftHintWidget prefab (grid root + framed cells)");
                 return true;
             }
             catch (Exception e)
             {
-                failure = e.Message;
+                State = BuildState.Failed;
+                FailureReason = e.Message;
                 if (holder != null) { UnityEngine.Object.Destroy(holder); holder = null; }
                 Plugin.Log.LogWarning("Bubble template could not be built, falling back: " + e.Message);
+                return false;
+            }
+        }
+
+        /// <summary>The game's widget prefab table (private LazyWidgetPrefabContainer.widgets). Only call once the UI exists.</summary>
+        public static bool TryGetRegisteredWidgets(out Dictionary<Type, LazyWidgetBase> widgets)
+        {
+            widgets = null;
+            try
+            {
+                var field = typeof(LazyWidgetPrefabContainer).GetField("widgets", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (field == null) return false;
+                widgets = field.GetValue(LazySingleton<LazyWidgetPrefabContainer>.Instance) as Dictionary<Type, LazyWidgetBase>;
+                return widgets != null;
+            }
+            catch
+            {
                 return false;
             }
         }
@@ -242,9 +307,9 @@ namespace QuickStash
             var cell = Field<UIItemCell>(hint, "craftResultItem");
             var canvasGroup = Field<CanvasGroup>(hint, "canvasGroup");
             var defaultSize = (Vector2)FieldValue(hint, "defaultLayoutSize");
-            var bigSize = (Vector2)FieldValue(hint, "bigLayoutSize");
             if (cell == null) throw new Exception("craftResultItem is null on the prefab");
             if (defaultSize == Vector2.zero) throw new Exception("defaultLayoutSize is zero on the prefab");
+            cell.gameObject.name = StashBubbleWidget.CellObjectName;   // instances find the cell by this name
 
             Deactivate(Field<Component>(hint, "progessCellContainer"));
             Deactivate(Field<Component>(hint, "progressBarWidget"));
@@ -281,12 +346,9 @@ namespace QuickStash
             widget.layoutElement = layoutElement;
             widget.rectTransform = rootRt;
             widget.frameSize = defaultSize;
-            widget.bigFrameSize = bigSize == Vector2.zero ? defaultSize : bigSize;
 
-            var widgetsField = typeof(LazyWidgetPrefabContainer).GetField("widgets", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (widgetsField == null) throw new Exception("LazyWidgetPrefabContainer.widgets not found");
-            var widgets = widgetsField.GetValue(LazySingleton<LazyWidgetPrefabContainer>.Instance) as Dictionary<Type, LazyWidgetBase>;
-            if (widgets == null) throw new Exception("LazyWidgetPrefabContainer.widgets is null (container not initialized)");
+            Dictionary<Type, LazyWidgetBase> widgets;
+            if (!TryGetRegisteredWidgets(out widgets)) throw new Exception("LazyWidgetPrefabContainer.widgets unavailable (container not initialized)");
             widgets[typeof(StashBubbleWidgetData)] = widget;
 
             template = widget;

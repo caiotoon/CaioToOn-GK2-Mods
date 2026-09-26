@@ -24,6 +24,8 @@ namespace QuickStash
 
         internal sealed class Entry
         {
+            /// <summary>The container's own SGuid (kept as-is: SGuid equality/hash use its id string).</summary>
+            public SGuid Uid;
             public float ExpiresAt;
             public readonly List<KeyValuePair<string, int>> Items = new List<KeyValuePair<string, int>>();
             public List<LazyWidgetDataBase> Widgets;
@@ -62,13 +64,18 @@ namespace QuickStash
 
         // ------------------------------------------------------------------ registry
 
-        /// <summary>Records what <paramref name="wgo"/> received (aggregated per item id, largest count first, capped) and redraws its bubble.</summary>
+        /// <summary>
+        /// Records what <paramref name="wgo"/> received (aggregated per item id, largest count first, capped) and redraws its bubble.
+        /// Sanity clamps live here only: seconds &lt;= 0 -> 2, maxItems &lt; 1 -> 1.
+        /// </summary>
         public static void Show(WgoData wgo, IEnumerable<KeyValuePair<string, int>> moved, float seconds, int maxItems)
         {
             if (!IsPatched || wgo == null || wgo.UniqueId == null || moved == null) return;
 
             if (seconds <= 0f) seconds = 2f;
-            var entry = new Entry { ExpiresAt = Time.unscaledTime + seconds };
+            if (maxItems < 1) maxItems = 1;
+
+            var entry = new Entry { Uid = wgo.UniqueId, ExpiresAt = Time.unscaledTime + seconds };
             var index = new Dictionary<string, int>();
             foreach (var kv in moved)
             {
@@ -91,7 +98,6 @@ namespace QuickStash
                 {
                     var t = ordered[b]; ordered[b] = ordered[b - 1]; ordered[b - 1] = t;
                 }
-            if (maxItems < 1) maxItems = 1;
             if (ordered.Count > maxItems) ordered.RemoveRange(maxItems, ordered.Count - maxItems);
             entry.Items.Clear();
             entry.Items.AddRange(ordered);
@@ -104,7 +110,7 @@ namespace QuickStash
             if (entry.Widgets.Count == 0) return;
 
             entries[wgo.UniqueId.Guid] = entry;   // a second stash while live replaces counts and expiry
-            Redraw(wgo.UniqueId);
+            Redraw(entry.Uid);
         }
 
         /// <summary>Call every frame. Removes expired entries and redraws their bubbles so our widgets disappear.</summary>
@@ -121,8 +127,9 @@ namespace QuickStash
             if (expired == null) return;
             foreach (var g in expired)
             {
+                Entry entry = entries[g];
                 entries.Remove(g);
-                Redraw(new SGuid(g));
+                Redraw(entry.Uid);
             }
         }
 
@@ -178,27 +185,19 @@ namespace QuickStash
             if (StashBubbleTemplate.EnsureBuilt())
             {
                 ActiveMode = Mode.Template;
-                Plugin.Log.LogInfo("Bubble widget path: Template (craft-hint frame + item cell)");
+                Plugin.Log.LogInfo("Bubble widget path: Template (craft-hint frame + item cells)");
                 return;
             }
-            if (StashBubbleTemplate.Status == "not built yet") return;   // manager exists but template not attempted (should not happen); retry later
+            if (StashBubbleTemplate.State != StashBubbleTemplate.BuildState.Failed) return;   // not decided yet; retry later
 
-            try
+            Dictionary<Type, LazyWidgetBase> widgets;
+            if (!StashBubbleTemplate.TryGetRegisteredWidgets(out widgets))
             {
-                LazyWidgetPrefabContainer.GetPrefabFromDataObject(new NeedItemsWidgetData(new List<NeedItemData>(), new MultiInventory(), isActive: true));
-                ActiveMode = Mode.NeedItems;
+                Plugin.Log.LogDebug("bubble prefab table unavailable; retrying on the next stash");
+                return;
             }
-            catch (Exception e)
-            {
-                if (e.Message != null && e.Message.StartsWith("Cannot find prefab"))
-                    ActiveMode = Mode.HintRows;
-                else
-                {
-                    Plugin.Log.LogDebug("bubble prefab probe inconclusive: " + e.Message);
-                    return;
-                }
-            }
-            Plugin.Log.LogInfo("Bubble widget path: " + ActiveMode + " (fallback; template " + StashBubbleTemplate.Status + ")");
+            ActiveMode = widgets.ContainsKey(typeof(NeedItemsWidgetData)) ? Mode.NeedItems : Mode.HintRows;
+            Plugin.Log.LogInfo("Bubble widget path: " + ActiveMode + " (fallback; template failed: " + StashBubbleTemplate.FailureReason + ")");
         }
 
         private static List<LazyWidgetDataBase> BuildWidgets(Entry entry, WgoData wgo)
@@ -210,7 +209,7 @@ namespace QuickStash
                 {
                     var cells = new List<StashBubbleCell>();
                     foreach (var kv in entry.Items)
-                        cells.Add(new StashBubbleCell(kv.Key, kv.Value, StarQuality(kv.Key)));
+                        cells.Add(new StashBubbleCell(kv.Key, kv.Value));
                     list.Add(new StashBubbleWidgetData(cells));   // one grid widget per container
                     break;
                 }
@@ -241,18 +240,6 @@ namespace QuickStash
                     break;
             }
             return list;
-        }
-
-        /// <summary>Star quality of a star-type item (drawn as the item_star_N badge), else -1.</summary>
-        private static int StarQuality(string itemId)
-        {
-            try
-            {
-                var def = GameBalance.Me.GetDataOrNull<ItemDef>(itemId);
-                if (def != null && def.qualityType == ItemDef.QualityType.Star) return def.quality;
-            }
-            catch { }
-            return -1;
         }
 
         /// <summary>Sprite name in EasySpritesCollection, as UIItemCell uses it (ItemDef.iconId); falls back to the item id.</summary>

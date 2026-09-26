@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace QuickStash
@@ -23,6 +22,10 @@ namespace QuickStash
         public bool DryRun;
         public int TargetCount;
         public readonly List<MoveEntry> Moves = new List<MoveEntry>();
+
+        /// <summary>Set when the real run refused to start (nothing was moved); <see cref="AbortReason"/> says why.</summary>
+        public bool Aborted;
+        public string AbortReason;
 
         /// <summary>Item totals of backpack (top-level + bag contents) + all targets (top-level) before/after a real run; -1 when not measured.</summary>
         public int TotalBefore = -1;
@@ -70,7 +73,7 @@ namespace QuickStash
             if (backpack == null || backpack.Data == null || targets == null) return result;
 
             List<Item> src = backpack.Data.Inventory;
-            var remaining = new Dictionary<Item, int>(RefEq<Item>.Instance);
+            var remaining = new Dictionary<Item, int>();   // Item does not override equality: reference semantics per stack
 
             foreach (var c in targets)
             {
@@ -194,6 +197,16 @@ namespace QuickStash
             var result = new StashResult { DryRun = false, TargetCount = targets != null ? targets.Count : 0 };
             if (backpack == null || backpack.Data == null || targets == null) return result;
 
+            // Vanilla Item.TakeAllItemsExistingInMeFromOtherInventory dereferences item.Definition.stackCount unguarded (Item.cs ~1024);
+            // an item without a definition would throw mid-loop after earlier containers already received items. Refuse up front.
+            string undefined = ItemsWithoutDefinition(backpack.Data.Inventory, includeBagContents);
+            if (undefined != null)
+            {
+                result.Aborted = true;
+                result.AbortReason = "backpack contains item(s) without a definition: " + undefined + " (nothing was moved)";
+                return result;
+            }
+
             result.TotalBefore = TotalItems(backpack, targets);
             foreach (var c in targets)
             {
@@ -265,6 +278,21 @@ namespace QuickStash
 
         // ------------------------------------------------------------------ helpers
 
+        /// <summary>Comma-separated ids of backpack items (top-level, and bag contents when included) whose Definition is null; null when none.</summary>
+        private static string ItemsWithoutDefinition(List<Item> items, bool includeBagContents)
+        {
+            List<string> broken = null;
+            foreach (var it in items)
+            {
+                if (it == null) continue;
+                if (it.Definition == null) { (broken ?? (broken = new List<string>())).Add(it.id ?? "(null id)"); continue; }   // IsBag needs the definition
+                if (!includeBagContents || !it.IsBag || it.Inventory == null) continue;
+                foreach (var inner in it.Inventory)
+                    if (inner != null && inner.Definition == null) (broken ?? (broken = new List<string>())).Add((inner.id ?? "(null id)") + " (in " + it.id + ")");
+            }
+            return broken == null ? null : string.Join(", ", broken);
+        }
+
         /// <summary>id -> count over the top-level stacks (<paramref name="bagContents"/> false) or over the contents of top-level bags (true).</summary>
         private static Dictionary<string, int> CountById(List<Item> items, bool bagContents)
         {
@@ -311,13 +339,6 @@ namespace QuickStash
                 n += SumCounts(inv.Data.Inventory, false);
             }
             return n;
-        }
-
-        private sealed class RefEq<T> : IEqualityComparer<T> where T : class
-        {
-            public static readonly RefEq<T> Instance = new RefEq<T>();
-            public bool Equals(T x, T y) => ReferenceEquals(x, y);
-            public int GetHashCode(T obj) => RuntimeHelpers.GetHashCode(obj);
         }
 
         /// <summary>
