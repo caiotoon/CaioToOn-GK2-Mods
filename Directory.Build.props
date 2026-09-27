@@ -3,6 +3,8 @@
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2</GameDir>
     <ManagedDir>$(GameDir)\GraveyardKeeper2_Data\Managed</ManagedDir>
     <BepInExDir>$(GameDir)\BepInEx</BepInExDir>
+    <!-- Where BepInEx.dll / 0Harmony.dll are read from at compile time. Override with -p:BepInExCoreDir=... when the loader is not installed in the game folder. -->
+    <BepInExCoreDir Condition="'$(BepInExCoreDir)' == ''">$(BepInExDir)\core</BepInExCoreDir>
 
     <Authors>caiotoon</Authors>
     <Company>CaioToOn</Company>

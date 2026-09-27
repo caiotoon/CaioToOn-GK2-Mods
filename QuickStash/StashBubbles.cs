@@ -20,9 +20,9 @@ namespace QuickStash
     /// </summary>
     internal static class StashBubbles
     {
-        internal enum Mode { Unknown, Template, NeedItems, HintRows }
+        private enum Mode { Unknown, Template, NeedItems, HintRows }
 
-        internal sealed class Entry
+        private sealed class Entry
         {
             /// <summary>The container's own SGuid (kept as-is: SGuid equality/hash use its id string).</summary>
             public SGuid Uid;
@@ -33,10 +33,9 @@ namespace QuickStash
 
         private static readonly Dictionary<Guid, Entry> entries = new Dictionary<Guid, Entry>();
         private static Harmony harmony;
+        private static Mode mode = Mode.Unknown;
 
         public static bool IsPatched => harmony != null;
-        public static int LiveCount => entries.Count;
-        public static Mode ActiveMode { get; private set; } = Mode.Unknown;
 
         // ------------------------------------------------------------------ patching
 
@@ -103,10 +102,9 @@ namespace QuickStash
             entry.Items.AddRange(ordered);
 
             EnsureMode();
-            if (ActiveMode == Mode.Unknown) return;
+            if (mode == Mode.Unknown) return;
 
-            try { entry.Widgets = BuildWidgets(entry, wgo); }
-            catch (Exception e) { Plugin.Log.LogWarning("bubble widgets could not be built: " + e.Message); return; }
+            entry.Widgets = BuildWidgets(entry, wgo);
             if (entry.Widgets.Count == 0) return;
 
             entries[wgo.UniqueId.Guid] = entry;   // a second stash while live replaces counts and expiry
@@ -141,15 +139,13 @@ namespace QuickStash
                 Wgo view = GameScene.GetWgoViewGlobal(uid);
                 if (view != null && !view.IsDespawning) view.DrawWidgets();   // DrawWidgets checks isVisible itself
             }
-            catch (Exception e)
-            {
-                Plugin.Log.LogDebug("bubble redraw failed: " + e.Message);
-            }
+            catch { }
         }
 
         // ------------------------------------------------------------------ harmony postfix
 
         // ReSharper disable InconsistentNaming
+        /// <summary>Runs inside the game's bubble pipeline: must never throw.</summary>
         private static void GetWidgetDataPostfix(Wgo __instance, ref List<LazyWidgetDataBase> __result)
         {
             try
@@ -164,10 +160,7 @@ namespace QuickStash
 
                 __result.AddRange(entry.Widgets);
             }
-            catch (Exception e)
-            {
-                Plugin.Log.LogDebug("bubble postfix failed: " + e.Message);
-            }
+            catch { }
         }
         // ReSharper restore InconsistentNaming
 
@@ -179,31 +172,21 @@ namespace QuickStash
         /// </summary>
         private static void EnsureMode()
         {
-            if (ActiveMode != Mode.Unknown) return;
+            if (mode != Mode.Unknown) return;
             if (UIObjectBubbleManager.Instance == null) return;   // UI not up yet; try again next time
 
-            if (StashBubbleTemplate.EnsureBuilt())
-            {
-                ActiveMode = Mode.Template;
-                Plugin.Log.LogInfo("Bubble widget path: Template (craft-hint frame + item cells)");
-                return;
-            }
+            if (StashBubbleTemplate.EnsureBuilt()) { mode = Mode.Template; return; }
             if (StashBubbleTemplate.State != StashBubbleTemplate.BuildState.Failed) return;   // not decided yet; retry later
 
             Dictionary<Type, LazyWidgetBase> widgets;
-            if (!StashBubbleTemplate.TryGetRegisteredWidgets(out widgets))
-            {
-                Plugin.Log.LogDebug("bubble prefab table unavailable; retrying on the next stash");
-                return;
-            }
-            ActiveMode = widgets.ContainsKey(typeof(NeedItemsWidgetData)) ? Mode.NeedItems : Mode.HintRows;
-            Plugin.Log.LogInfo("Bubble widget path: " + ActiveMode + " (fallback; template failed: " + StashBubbleTemplate.FailureReason + ")");
+            if (!StashBubbleTemplate.TryGetRegisteredWidgets(out widgets)) return;            // prefab table unavailable; retry later
+            mode = widgets.ContainsKey(typeof(NeedItemsWidgetData)) ? Mode.NeedItems : Mode.HintRows;
         }
 
         private static List<LazyWidgetDataBase> BuildWidgets(Entry entry, WgoData wgo)
         {
             var list = new List<LazyWidgetDataBase>();
-            switch (ActiveMode)
+            switch (mode)
             {
                 case Mode.Template:
                 {
@@ -242,8 +225,8 @@ namespace QuickStash
             return list;
         }
 
-        /// <summary>Sprite name in EasySpritesCollection, as UIItemCell uses it (ItemDef.iconId); falls back to the item id.</summary>
-        public static string IconId(string itemId)
+        /// <summary>Sprite name in EasySpritesCollection, as UIItemCell uses it (ItemDef.iconId); falls back to the item id. HintRows path only.</summary>
+        private static string IconId(string itemId)
         {
             try
             {
@@ -252,16 +235,6 @@ namespace QuickStash
             }
             catch { }
             return itemId;
-        }
-
-        /// <summary>For the diagnostics dump: whether the inventory-cell sprite exists.</summary>
-        public static string DescribeIcon(string itemId)
-        {
-            string icon = IconId(itemId);
-            string has;
-            try { has = LazySingletonSO<EasySpritesCollection>.Instance.HasSprite(icon) ? "yes" : "NO"; }
-            catch (Exception e) { has = "? (" + e.GetType().Name + ")"; }
-            return "iconId=" + icon.PadRight(24) + " easySprite=" + has;
         }
     }
 }

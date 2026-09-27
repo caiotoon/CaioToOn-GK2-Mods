@@ -55,14 +55,9 @@ namespace QuickStash
         private readonly List<RectTransform> frames = new List<RectTransform>();
         private readonly List<UIItemCell> cells = new List<UIItemCell>();
 
-        /// <summary>Layout actually used by the most recent Redraw (for the diagnostics dump).</summary>
-        public static string LastLayoutInfo = "none yet";
-
-        private static bool redrawFailureLogged;
-
         /// <summary>
         /// Runs inside the game's bubble flush (UIObjectBubbleManager.FlushPendingDisplays), so it must never throw:
-        /// on failure the widget is left empty and the error is logged once.
+        /// on failure the widget is left empty.
         /// </summary>
         public override void Redraw()
         {
@@ -70,15 +65,10 @@ namespace QuickStash
             {
                 RedrawUnsafe();
             }
-            catch (Exception e)
+            catch
             {
                 for (int i = 0; i < slots.Count; i++)
                     if (slots[i] != null) slots[i].gameObject.SetActive(false);
-                if (!redrawFailureLogged)
-                {
-                    redrawFailureLogged = true;
-                    Plugin.Log.LogDebug("StashBubbleWidget.Redraw failed (widget left empty): " + e);
-                }
             }
         }
 
@@ -145,11 +135,6 @@ namespace QuickStash
                 rt.sizeDelta = new Vector2(width, height);
                 LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
             }
-
-            LastLayoutInfo = "cells=" + n + " columns=" + columns + " rows=" + rows + " scale=" + scale
-                             + " cellSize=" + cellSize.x.ToString("0.#") + "x" + cellSize.y.ToString("0.#")
-                             + " spacing=" + spacing.ToString("0.#") + " (unscaled " + spacingUnscaled.ToString("0.#") + (spacingCfg >= 0f ? " cfg" : " auto") + ")"
-                             + " size=" + width.ToString("0.#") + "x" + height.ToString("0.#") + " showCount=" + showCount;
         }
 
         /// <summary>The bubble's own vertical layout spacing (our parent), else 2.</summary>
@@ -231,20 +216,6 @@ namespace QuickStash
         private static StashBubbleWidget template;
 
         public static BuildState State { get; private set; } = BuildState.NotBuilt;
-        public static string FailureReason { get; private set; }
-
-        public static string Status
-        {
-            get
-            {
-                switch (State)
-                {
-                    case BuildState.Built: return "built";
-                    case BuildState.Failed: return "failed(" + FailureReason + ")";
-                    default: return "not built yet";
-                }
-            }
-        }
 
         /// <summary>true when the template is registered. Never touches singletons before the bubble manager exists.</summary>
         public static bool EnsureBuilt()
@@ -257,15 +228,13 @@ namespace QuickStash
             {
                 Build();
                 State = BuildState.Built;
-                Plugin.Log.LogInfo("Bubble template built from UICraftHintWidget prefab (grid root + framed cells)");
                 return true;
             }
             catch (Exception e)
             {
                 State = BuildState.Failed;
-                FailureReason = e.Message;
                 if (holder != null) { UnityEngine.Object.Destroy(holder); holder = null; }
-                Plugin.Log.LogWarning("Bubble template could not be built, falling back: " + e.Message);
+                Plugin.Log.LogWarning("Bubble template could not be built, using a plain fallback bubble: " + e.Message);
                 return false;
             }
         }

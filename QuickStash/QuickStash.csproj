@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>QuickStash</AssemblyName>
     <RootNamespace>QuickStash</RootNamespace>
-    <Version>0.6.1</Version>
+    <Version>0.7.0</Version>
     <Description>Graveyard Keeper 2: one key moves stackable backpack items into nearby containers that already hold them.</Description>
     <PluginOutDir>$(BepInExDir)\plugins\QuickStash</PluginOutDir>
   </PropertyGroup>
@@ -12,11 +12,11 @@
   <ItemGroup>
     <!-- BepInEx 5 -->
     <Reference Include="BepInEx">
-      <HintPath>$(BepInExDir)\core\BepInEx.dll</HintPath>
+      <HintPath>$(BepInExCoreDir)\BepInEx.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="0Harmony">
-      <HintPath>$(BepInExDir)\core\0Harmony.dll</HintPath>
+      <HintPath>$(BepInExCoreDir)\0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
 

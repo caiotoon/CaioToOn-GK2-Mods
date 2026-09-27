@@ -15,17 +15,17 @@ namespace QuickStash
 
     internal static class ContainerFinder
     {
-        public static bool HasInventory(WgoData w)
+        private static bool HasInventory(WgoData w)
         {
             return w != null && w.Definition != null && w.Definition.inventorySize != 0;
         }
 
-        public static bool IsConveyorChest(WGODef d)
+        private static bool IsConveyorChest(WGODef d)
         {
             return d != null && (d.conveyorType == ConveyorElementType.Chest || d.conveyorType == ConveyorElementType.ChestOut);
         }
 
-        public static float Distance(WgoData w, Vector3 playerPos)
+        private static float Distance(WgoData w, Vector3 playerPos)
         {
             return Vector3.Distance(w.Position, playerPos);
         }
@@ -34,7 +34,7 @@ namespace QuickStash
         /// Zone containers as cached by the game (WorldZoneData.MultiInventoryWgoDatas, filled in PrepareForGame).
         /// May be null before PrepareForGame ran; then this returns an empty list.
         /// </summary>
-        public static List<WgoData> ZoneWgosPrepared(WorldZoneData zone)
+        private static List<WgoData> ZoneWgosPrepared(WorldZoneData zone)
         {
             var list = new List<WgoData>();
             var src = zone != null ? zone.MultiInventoryWgoDatas : null;
@@ -48,7 +48,7 @@ namespace QuickStash
         /// Zone containers resolved from WorldZoneData.wgoDataList through the world cache
         /// (same path as <c>new MultiInventory(zone)</c>).
         /// </summary>
-        public static List<WgoData> ZoneWgosFromGuids(WorldZoneData zone)
+        private static List<WgoData> ZoneWgosFromGuids(WorldZoneData zone)
         {
             var list = new List<WgoData>();
             if (zone == null || zone.wgoDataList == null || MainGame.Instance == null) return list;
@@ -63,7 +63,7 @@ namespace QuickStash
         }
 
         /// <summary>All visible, non-temporary containers in the player's scene within <paramref name="radius"/>.</summary>
-        public static List<WgoData> RadiusWgos(string sceneId, Vector3 playerPos, float radius)
+        private static List<WgoData> RadiusWgos(string sceneId, Vector3 playerPos, float radius)
         {
             var list = new List<WgoData>();
             if (MainGame.Instance == null || MainGame.WorldData == null) return list;
@@ -88,7 +88,7 @@ namespace QuickStash
         /// assigned as CurrentWorldZoneData too but PrepareForGame clears their lists. Otherwise, or with no zone, the
         /// radius scan is used.
         /// </summary>
-        public static List<ContainerInfo> FindTargets(PlayerData pd, float fallbackRadius, bool includeConveyorChests, out string source)
+        public static List<ContainerInfo> FindTargets(PlayerData pd, float fallbackRadius, bool includeConveyorChests)
         {
             Vector3 pos = pd.position.Value;
             WorldZoneData zone = pd.CurrentWorldZoneData;
@@ -97,17 +97,11 @@ namespace QuickStash
             if (zone != null && zone.IsContainer)
             {
                 candidates = ZoneWgosPrepared(zone);
-                source = "zone.MultiInventoryWgoDatas";
-                if (candidates.Count == 0)
-                {
-                    candidates = ZoneWgosFromGuids(zone);
-                    source = "zone.wgoDataList";
-                }
+                if (candidates.Count == 0) candidates = ZoneWgosFromGuids(zone);
             }
             else
             {
                 candidates = RadiusWgos(pd.currentGameSceneId, pos, fallbackRadius);
-                source = zone == null ? "radius " + fallbackRadius + " (no zone)" : "radius " + fallbackRadius + " (zone " + zone.id + " is not a container zone)";
             }
 
             // nearest first BEFORE the shared-inventory dedup, so the retained container (bubble anchor, log id) is the closest one

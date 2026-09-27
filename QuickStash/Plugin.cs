@@ -15,13 +15,11 @@ namespace QuickStash
     {
         public const string PluginGuid = "com.caiotoon.gk2.quickstash";
         public const string PluginName = "QuickStash";
-        public const string PluginVersion = "0.6.1";
+        public const string PluginVersion = "0.7.0";
 
         internal static ManualLogSource Log;
 
         internal static ConfigEntry<KeyboardShortcut> StashKey;
-        internal static ConfigEntry<KeyboardShortcut> DiagnosticsKey;
-        internal static ConfigEntry<bool> DryRun;
         internal static ConfigEntry<bool> PlaySound;
         internal static ConfigEntry<bool> IncludeBagContents;
         internal static ConfigEntry<bool> ShowBubbles;
@@ -37,9 +35,6 @@ namespace QuickStash
         /// <summary>Appended to every setting that the file watcher applies without a restart.</summary>
         private const string LiveNote = "Live: edits to the cfg file apply within a second, no restart needed.";
 
-        /// <summary>Gate reason for a co-op client; TryStash turns it into a rate-limited warning.</summary>
-        internal const string CoopReason = "co-op client (host only)";
-
         // config reload: BepInEx 5 never re-reads its file, so we watch it ourselves
         private FileSystemWatcher configWatcher;
         private volatile bool configDirty;
@@ -48,6 +43,7 @@ namespace QuickStash
         private float lastConfigReload = -100f;
 
         private float lastCoopWarning = -100f;
+        private static bool bubbleFailureLogged;
 
         private void Awake()
         {
@@ -55,11 +51,7 @@ namespace QuickStash
 
             StashKey = Config.Bind("Keys", "StashKey", new KeyboardShortcut(KeyCode.G),
                 "Moves every stackable backpack item that already exists in a nearby container into that container (vanilla 'move all similar' per container). " + LiveNote);
-            DiagnosticsKey = Config.Bind("Keys", "DiagnosticsKey", new KeyboardShortcut(KeyCode.F9),
-                "Writes BepInEx/QuickStash-dump.txt (+ a timestamped copy): containers around the player, backpack, key bindings, dry-run stash plan. Never moves anything. " + LiveNote);
 
-            DryRun = Config.Bind("Behaviour", "DryRun", false,
-                "When true, StashKey only logs what would be moved. " + LiveNote);
             PlaySound = Config.Bind("Behaviour", "PlaySound", true,
                 "Play 'item_put' after a stash, 'gui_click' when nothing moved. " + LiveNote);
             IncludeBagContents = Config.Bind("Behaviour", "IncludeBagContents", true,
@@ -87,14 +79,12 @@ namespace QuickStash
             if (ShowBubbles.Value)
             {
                 string err;
-                if (StashBubbles.TryPatch(PluginGuid, out err)) Log.LogInfo("Bubble patch applied (Wgo.GetWidgetData postfix)");
-                else Log.LogWarning("Bubble patch failed, bubbles disabled: " + err);
+                if (!StashBubbles.TryPatch(PluginGuid, out err)) Log.LogWarning("Bubble patch failed, bubbles disabled: " + err);
             }
 
             StartConfigWatcher();
 
-            Log.LogInfo("QuickStash loaded  (stash: " + StashKey.Value + ", diagnostics: " + DiagnosticsKey.Value + ", dryRun: " + DryRun.Value
-                        + ", bubbles: " + (StashBubbles.IsPatched ? BubbleSeconds.Value + "s" : "off")
+            Log.LogInfo("QuickStash loaded  (stash: " + StashKey.Value + ", bubbles: " + (StashBubbles.IsPatched ? "on" : "off")
                         + ", config reload: " + (watcherFailed ? "timer 3s" : "file watcher") + ")");
         }
 
@@ -108,27 +98,10 @@ namespace QuickStash
             PollConfigReload();
             if (StashBubbles.IsPatched) StashBubbles.Tick();
 
-            bool diagnostics = IsShortcutDown(DiagnosticsKey.Value);
-            bool stash = IsShortcutDown(StashKey.Value);
-            if (!diagnostics && !stash) return;
+            if (!IsShortcutDown(StashKey.Value)) return;
 
-            if (!IsGameLoaded())
-            {
-                Log.LogInfo("QuickStash: no game loaded, " + (diagnostics ? "dump" : "stash") + " skipped");
-                return;
-            }
-
-            if (diagnostics)
-            {
-                try { Log.LogInfo(Diagnostics.WriteDump()); }
-                catch (Exception e) { Log.LogError("Dump failed: " + e); }
-            }
-
-            if (stash)
-            {
-                try { TryStash(); }
-                catch (Exception e) { Log.LogError("Stash failed: " + e); }
-            }
+            try { TryStash(); }
+            catch (Exception e) { Log.LogError("Stash failed: " + e); }
         }
 
         // ------------------------------------------------------------------ input
@@ -137,7 +110,7 @@ namespace QuickStash
         /// BepInEx's KeyboardShortcut.IsDown() returns false while any unrelated key is held (e.g. W while walking),
         /// so the shortcut is tested manually: main key just pressed and every modifier held.
         /// </summary>
-        internal static bool IsShortcutDown(KeyboardShortcut shortcut)
+        private static bool IsShortcutDown(KeyboardShortcut shortcut)
         {
             if (shortcut.MainKey == KeyCode.None || !Input.GetKeyDown(shortcut.MainKey)) return false;
             foreach (KeyCode modifier in shortcut.Modifiers)
@@ -146,7 +119,7 @@ namespace QuickStash
         }
 
         /// <summary>MainGame.PlayerData survives GoToMainMenu; the player's current scene does not.</summary>
-        internal static bool IsGameLoaded()
+        private static bool IsGameLoaded()
         {
             if (MainGame.Instance == null || MainGame.PlayerData == null) return false;
             var pc = MainGame.PlayerController;
@@ -191,7 +164,8 @@ namespace QuickStash
 
         /// <summary>
         /// Watcher mode: reload once the file has been quiet for 0.5 s (editors write in several steps) and at least
-        /// 0.5 s after the previous reload. Timer mode (watcher unavailable): reload every 3 s.
+        /// 0.5 s after the previous reload. Timer mode (watcher unavailable): reload every 3 s. A failed reload
+        /// (file mid-write) is retried on the next change.
         /// </summary>
         private void PollConfigReload()
         {
@@ -206,7 +180,7 @@ namespace QuickStash
             lastConfigReload = now;
             configDirty = false;
             try { Config.Reload(); }
-            catch (Exception e) { Log.LogDebug("Config reload failed: " + e.Message); }
+            catch { }
         }
 
         private void DisposeConfigWatcher()
@@ -220,7 +194,7 @@ namespace QuickStash
                 configWatcher.Renamed -= OnConfigFileEvent;
                 configWatcher.Dispose();
             }
-            catch (Exception e) { Log.LogDebug("Config watcher dispose failed: " + e.Message); }
+            catch { }
             configWatcher = null;
         }
 
@@ -228,33 +202,27 @@ namespace QuickStash
 
         private void TryStash()
         {
-            string reason;
-            if (!CanStash(out reason))
+            bool coopClient;
+            if (!CanStash(out coopClient))
             {
-                if (reason == CoopReason && Time.unscaledTime - lastCoopWarning >= 10f)
+                if (coopClient && Time.unscaledTime - lastCoopWarning >= 10f)
                 {
                     lastCoopWarning = Time.unscaledTime;
                     Log.LogWarning("QuickStash only works for the host in co-op (inventory changes are not replicated from clients).");
                 }
-                Log.LogDebug("Stash skipped: " + reason);
                 return;
             }
 
             var pd = MainGame.PlayerData;
-            string source;
-            var targets = ContainerFinder.FindTargets(pd, FallbackRadius.Value, IncludeConveyorChests.Value, out source);
-            var result = Stasher.Run(pd.inventory, targets, DryRun.Value, IncludeBagContents.Value);
+            var targets = ContainerFinder.FindTargets(pd, FallbackRadius.Value, IncludeConveyorChests.Value);
+            var result = Stasher.Execute(pd.inventory, targets, IncludeBagContents.Value);
 
             if (result.Aborted)
             {
                 Log.LogWarning("Stash aborted: " + result.AbortReason);
                 return;
             }
-            Log.LogInfo(Stasher.Describe(result, source));
-
-            if (result.DryRun) return;
-            if (result.ConservationChecked && !result.ConservationOk)
-                Log.LogWarning("Item totals changed by " + (result.TotalAfter - result.TotalBefore) + " during stash; please report this with the dump.");
+            Log.LogInfo(Stasher.Describe(result));
 
             AfterStash(pd, result);
         }
@@ -300,14 +268,16 @@ namespace QuickStash
             }
             catch (Exception e)
             {
-                Log.LogDebug("bubbles failed: " + e.Message);
+                if (bubbleFailureLogged) return;
+                bubbleFailureLogged = true;
+                Log.LogWarning("Stash bubbles failed (further failures are not logged): " + e.Message);
             }
         }
 
         private static void PlaySoundSafe(string id)
         {
             try { LazyAudio.PlayAndForget(id); }
-            catch (Exception e) { Log.LogDebug("sound '" + id + "' failed: " + e.Message); }
+            catch { }
         }
 
         private static FieldInfo currentLangField;
@@ -331,37 +301,31 @@ namespace QuickStash
 
                 LazySingleton<UINotificator>.Instance.ShowSimpleTextNotification(key);
             }
-            catch (Exception e)
-            {
-                Log.LogDebug("notification failed: " + e.Message);
-            }
+            catch { }
         }
 
         // ------------------------------------------------------------------ gates
 
-        /// <summary>All gates must pass. <paramref name="reason"/> names the first failing one. Side-effect free.</summary>
-        internal static bool CanStash(out string reason)
+        /// <summary>
+        /// Game loaded, controls enabled, not paused, input active, no window open, and not a co-op client.
+        /// Side-effect free; <paramref name="coopClient"/> is set when that gate is the one that failed.
+        /// </summary>
+        private static bool CanStash(out bool coopClient)
         {
-            if (!IsGameLoaded()) { reason = "game not loaded"; return false; }
-
-            var pc = MainGame.PlayerController;
-            if (!pc.IsControlsEnabled) { reason = "PlayerController.IsControlsEnabled == false"; return false; }
-            if (MainGame.IsGamePaused) { reason = "game paused"; return false; }
-            if (!LazyInput.IsInputActive()) { reason = "LazyInput.IsInputActive() == false"; return false; }
-
-            string window;
-            if (IsAnyWindowOpen(out window)) { reason = "window open: " + window; return false; }
-
-            if (IsCoopClient()) { reason = CoopReason; return false; }
-
-            reason = null;
+            coopClient = false;
+            if (!IsGameLoaded()) return false;
+            if (!MainGame.PlayerController.IsControlsEnabled) return false;
+            if (MainGame.IsGamePaused) return false;
+            if (!LazyInput.IsInputActive()) return false;
+            if (IsAnyWindowOpen()) return false;
+            if (IsCoopClient()) { coopClient = true; return false; }
             return true;
         }
 
         private static readonly Dictionary<Type, PropertyInfo> isShownCache = new Dictionary<Type, PropertyInfo>();
 
         /// <summary>LazyWindow&lt;T&gt;.IsShown lives on a generic base, so it is read via reflection per concrete type.</summary>
-        internal static bool IsWindowShown(LazyWidgetBase w)
+        private static bool IsWindowShown(LazyWidgetBase w)
         {
             if (w == null) return false;
             Type t = w.GetType();
@@ -375,32 +339,29 @@ namespace QuickStash
             return p != null && (bool)p.GetValue(w, null);
         }
 
-        internal static bool IsAnyWindowOpen(out string name)
+        /// <summary>Any window in the stack, any modal window, or any LazyWindow reporting IsShown. Fails closed.</summary>
+        private static bool IsAnyWindowOpen()
         {
-            name = null;
             try
             {
-                var active = LazyWindowsStackController.ActiveWindow;
-                if (active != null) { name = active.GetType().Name + " (ActiveWindow)"; return true; }
-                if (LazyWindowsStackController.HasAnyModalWindowOpened) { name = "modal window"; return true; }
+                if (LazyWindowsStackController.ActiveWindow != null) return true;
+                if (LazyWindowsStackController.HasAnyModalWindowOpened) return true;
                 if (!LazyUI.IsInitialized) return false;
 
                 foreach (var w in LazyUI.GetAllWindows())
                 {
                     if (w == null) continue;
-                    if (LazyWindowsStackController.IsWindowOpened(w)) { name = w.GetType().Name + " (in stack)"; return true; }
-                    if (IsWindowShown(w)) { name = w.GetType().Name + " (IsShown)"; return true; }
+                    if (LazyWindowsStackController.IsWindowOpened(w) || IsWindowShown(w)) return true;
                 }
                 return false;
             }
-            catch (Exception e)
+            catch
             {
-                name = "window check failed: " + e.Message;
-                return true; // fail closed
+                return true;
             }
         }
 
-        internal static bool IsCoopClient()
+        private static bool IsCoopClient()
         {
             try
             {
@@ -408,9 +369,8 @@ namespace QuickStash
                 var nm = LazyNetwork.NetworkManager;
                 return nm != null && nm.IsCoopGame && !nm.IsHost;
             }
-            catch (Exception e)
+            catch
             {
-                Log.LogDebug("co-op check failed: " + e.Message);
                 return false;
             }
         }

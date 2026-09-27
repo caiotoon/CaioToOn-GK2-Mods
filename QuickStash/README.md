@@ -27,8 +27,6 @@ while the game runs (key rebinds included), except `ShowBubbles`, which needs a 
 | Section | Key | Default | Meaning |
 |---|---|---|---|
 | Keys | `StashKey` | `G` | Stash hotkey (Unity KeyCode, modifiers allowed: `G + LeftShift`). Works while other keys are held, e.g. while walking |
-| Keys | `DiagnosticsKey` | `F9` | Writes `BepInEx\QuickStash-dump.txt`. Never moves anything |
-| Behaviour | `DryRun` | false | Stash key only logs what would move |
 | Behaviour | `PlaySound` | true | Sounds on stash / nothing to stash |
 | Behaviour | `IncludeBagContents` | true | Also stash from bags inside the backpack |
 | Behaviour | `ShowBubbles` | true | Bubble above receiving containers (restart to change) |
@@ -41,13 +39,6 @@ while the game runs (key rebinds included), except `ShowBubbles`, which needs a 
 | Discovery | `FallbackRadius` | 12 | World units, used when not inside a container zone |
 | Discovery | `IncludeConveyorChests` | false | Treat conveyor chests as targets |
 
-## Diagnostics
-
-`F9` writes a dump (latest plus a timestamped copy per zone) with: player position and zone, every
-container in the zone and within radius with filters and contents, all container definitions, backpack and
-toolbelt contents, game key bindings and collisions with the configured keys, the dry-run stash plan with
-reasons for unmoved stacks, the stash gates, and the last bubble layout.
-
 ## How it works
 
 - Discovery: `PlayerData.CurrentWorldZoneData.MultiInventoryWgoDatas` (fallback `wgoDataList`) when the zone
@@ -58,7 +49,8 @@ reasons for unmoved stacks, the stash gates, and the last bubble layout.
   presses while any other key is held). The config file is watched with a `FileSystemWatcher` and reloaded
   half a second after the last change.
 - Move: `Inventory.TakeAllItemsExistingInMeFromOtherInventory(backpack, ignoreMyBags: true,
-  ignoreOtherBags: !IncludeBagContents)` per container. Item totals are checked before and after.
+  ignoreOtherBags: !IncludeBagContents)` per container. What moved is read from a backpack snapshot around
+  each call and logged as one line (`Stashed N items into M containers: chest<-blood x1, ...`).
 - Bubble: Harmony postfix on `Wgo.GetWidgetData()` appends a custom widget built at runtime from the game's
   `UICraftHintWidget` prefab (frame + `UIItemCell`, progress parts removed), registered in
   `LazyWidgetPrefabContainer`.
