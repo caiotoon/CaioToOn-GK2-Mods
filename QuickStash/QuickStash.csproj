@@ -6,7 +6,6 @@
     <RootNamespace>QuickStash</RootNamespace>
     <Version>0.7.0</Version>
     <Description>Graveyard Keeper 2: one key moves stackable backpack items into nearby containers that already hold them.</Description>
-    <PluginOutDir>$(BepInExDir)\plugins\QuickStash</PluginOutDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -81,12 +80,5 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
-
-  <Target Name="CopyToPlugins" AfterTargets="Build" Condition="Exists('$(BepInExDir)')">
-    <MakeDir Directories="$(PluginOutDir)" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginOutDir)" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PluginOutDir)" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
-    <Message Importance="high" Text="QuickStash -> $(PluginOutDir)" />
-  </Target>
 
 </Project>
