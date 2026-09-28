@@ -33,7 +33,7 @@ checked once a second while the game runs, so edits (key rebinds included) apply
 | Behaviour | `BubbleSeconds` | 2 | Bubble duration in real seconds |
 | Behaviour | `BubbleScale` | 0.6 | 1 = craft-hint size |
 | Behaviour | `BubbleColumns` | 2 | 0 or less = auto: 2 columns when scale ≤ 0.5, else 1 |
-| Behaviour | `BubbleSpacing` | -1 | Gap between cells in unscaled px. Negative = game default |
+| Behaviour | `BubbleSpacing` | 4 | Gap between cells in unscaled px. Negative = game default |
 | Behaviour | `MaxBubbleItems` | 4 | Cells per container, largest counts first |
 | Behaviour | `ShowBubbleCount` | false | Count number on cells (scaled font looks rough) |
 | Discovery | `FallbackRadius` | 12 | World units, used when not inside a container zone |

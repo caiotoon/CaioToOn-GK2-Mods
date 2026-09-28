@@ -59,7 +59,7 @@ namespace QuickStash
                 "Show the item count on each bubble cell. Off by default because the scaled font looks rough.");
             BubbleColumns = Config.Bind("Behaviour", "BubbleColumns", 2,
                 "Cells per row in a container bubble. 0 or less = auto: 2 columns when BubbleScale <= 0.5, else 1.");
-            BubbleSpacing = Config.Bind("Behaviour", "BubbleSpacing", -1f,
+            BubbleSpacing = Config.Bind("Behaviour", "BubbleSpacing", 4f,
                 "Gap between cells in unscaled pixels (it is multiplied by BubbleScale). Negative = auto: the bubble's own layout spacing, or 2 if unknown.");
 
             FallbackRadius = Config.Bind("Discovery", "FallbackRadius", 12f,
