@@ -10,11 +10,16 @@ builds to its own plugin folder.
 ## Layout
 
 ```
+AGENTS.md               principles, working rules and conventions for anyone changing this repo
+CLAUDE.md               points Claude Code at AGENTS.md
 Directory.Build.props   shared MSBuild props: GameDir, ManagedDir, BepInExDir, compiler settings
 Directory.Build.targets shared build steps: zip package into dist/, optional direct deploy
 GraveyardKeeper2Mods.sln
 tools/decompile.ps1     regenerates decompiled/ (git-ignored) from the game assemblies with ilspycmd
-<Mod>/<Mod>.csproj      one project per mod; post-build copies the DLL to <game>\BepInEx\plugins\<Mod>\
+<Mod>/<Mod>.csproj      one project per mod
+<Mod>/README.md         what the mod does and how to configure it
+<Mod>/DESIGN.md         how it is built, the decisions and their reasons, invariants
+\
 ```
 
 ## Requirements
@@ -59,9 +64,12 @@ folder: `-p:BepInExCoreDir="<path>\BepInEx\core"`.
 ## Adding a mod
 
 1. `dotnet new classlib -n <Mod> -f netstandard2.1`, then replace the csproj with a copy of
-   `QuickStash/QuickStash.csproj` and adjust `AssemblyName`, `RootNamespace`, `Version`, `PluginOutDir`.
+   `QuickStash/QuickStash.csproj` and adjust `AssemblyName`, `RootNamespace`, `Version`.
 2. `dotnet sln add <Mod>/<Mod>.csproj`.
 3. Plugin GUID convention: `com.caiotoon.gk2.<mod>`.
+4. Add `<Mod>/README.md` and `<Mod>/DESIGN.md`, and a row in the table above.
+
+Read [AGENTS.md](AGENTS.md) first.
 
 ## Game facts worth knowing
 
@@ -71,7 +79,13 @@ folder: `-p:BepInExCoreDir="<path>\BepInEx\core"`.
   chest window shows as zone storage.
 - Item icons come from `EasySpritesCollection.GetSprite(ItemDef.iconId)`; TextMeshPro sprite tags only
   cover a few HUD glyphs.
+- Controller input is Rewired behind `LazyInput`. A physical button raises every game action (`GameKey`)
+  bound to it, and mods read `LazyInput.GetKeyDown(GameKey)` while `LazyInput.IsGamepadActive`. Controller
+  bindings cannot be changed in the game's settings. Raw button actions: `RightTrigger`, `LeftTrigger`,
+  `RightBumper`, `RightStick`, `LeftStick`, `DpadUp/Down/Left/Right`. There is no left bumper action.
+- `PlayerInputHandler.UpdateInput()` is the gameplay input routine. The game calls it only while the player
+  is free to act.
 
 ## License
 
-[MIT](LICENSE). Graveyard Keeper 2 and its assets belong to Lazy Bear Games; this repository contains no game code or assets apart from screenshots used for the mod page.
+[MIT](LICENSE). Graveyard Keeper 2 and its assets belong to Lazy Bear Games; this repository contains no game code and no game assets.
