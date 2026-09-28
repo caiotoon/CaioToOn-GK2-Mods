@@ -1,0 +1,23 @@
+<Project>
+  <!-- Shared by every mod project. Mod name = assembly name. -->
+  <PropertyGroup>
+    <DistDir>$(MSBuildThisFileDirectory)dist\</DistDir>
+    <PackageStageDir>$(MSBuildProjectDirectory)\obj\package\</PackageStageDir>
+    <PluginSubDir>BepInEx\plugins\$(AssemblyName)</PluginSubDir>
+  </PropertyGroup>
+
+  <!-- Vortex / Nexus package: dist\<Mod>-<Version>.zip containing BepInEx\plugins\<Mod>\<Mod>.dll -->
+  <Target Name="PackageMod" AfterTargets="Build">
+    <RemoveDir Directories="$(PackageStageDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageStageDir)$(PluginSubDir)" />
+    <MakeDir Directories="$(DistDir)" />
+    <ZipDirectory SourceDirectory="$(PackageStageDir)" DestinationFile="$(DistDir)$(AssemblyName)-$(Version).zip" Overwrite="true" />
+    <Message Importance="high" Text="$(AssemblyName) -> $(DistDir)$(AssemblyName)-$(Version).zip" />
+  </Target>
+
+  <!-- Opt-in direct deploy, bypassing Vortex: dotnet build -c Release -p:DeployToGame=true -->
+  <Target Name="DeployToGame" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' And Exists('$(BepInExDir)')">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\$(PluginSubDir)" />
+    <Message Importance="high" Text="$(AssemblyName) -> $(GameDir)\$(PluginSubDir)" />
+  </Target>
+</Project>

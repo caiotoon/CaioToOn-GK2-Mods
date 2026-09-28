@@ -7,7 +7,8 @@ chest window, applied to every container in the current zone without opening any
 - Source: backpack only, including items inside bags (farming bag etc.). Toolbelt, equipped gear and the
   carried overhead item are never touched.
 - Targets: containers in the player's current world zone (what the chest window lists as storage), nearest
-  first. Outside any zone, containers within `FallbackRadius` are used.
+  first. When not inside a container zone (no zone, or a zone of type SimpleNotContainer), containers within
+  `FallbackRadius` are used.
 - Only stackables move, so tools, weapons and bags themselves never move. White/black-listed containers are
   respected (vanilla check).
 - Feedback: `item_put` sound, on-screen `Stashed N items`, and a bubble above each receiving container
@@ -20,40 +21,38 @@ Build (see the repo README) or drop `QuickStash.dll` into `<game>\BepInEx\plugin
 
 ## Config
 
-`<game>\BepInEx\config\com.caiotoon.gk2.quickstash.cfg`. The file is re-read on every key press, so edits
-apply without restarting, except `ShowBubbles`.
+`<game>\BepInEx\config\com.caiotoon.gk2.quickstash.cfg`. All options are live: the file's timestamp is
+checked once a second while the game runs, so edits (key rebinds included) apply without restarting.
 
 | Section | Key | Default | Meaning |
 |---|---|---|---|
-| Keys | `StashKey` | `G` | Stash hotkey (Unity KeyCode, modifiers allowed: `G + LeftShift`) |
-| Keys | `DiagnosticsKey` | `F9` | Writes `BepInEx\QuickStash-dump.txt`. Never moves anything |
-| Behaviour | `DryRun` | false | Stash key only logs what would move |
+| Keys | `StashKey` | `G` | Stash hotkey (Unity KeyCode, modifiers allowed: `G + LeftShift`). Works while other keys are held, e.g. while walking |
 | Behaviour | `PlaySound` | true | Sounds on stash / nothing to stash |
 | Behaviour | `IncludeBagContents` | true | Also stash from bags inside the backpack |
-| Behaviour | `ShowBubbles` | true | Bubble above receiving containers (restart to change) |
+| Behaviour | `ShowBubbles` | true | Bubble above receiving containers |
 | Behaviour | `BubbleSeconds` | 2 | Bubble duration in real seconds |
-| Behaviour | `BubbleScale` | 1 | 1 = craft-hint size |
-| Behaviour | `BubbleColumns` | 0 | 0 = auto: 2 columns when scale ≤ 0.5, else 1 |
-| Behaviour | `BubbleSpacing` | -1 | Gap between cells in unscaled px. Negative = game default |
+| Behaviour | `BubbleScale` | 0.6 | 1 = craft-hint size |
+| Behaviour | `BubbleColumns` | 2 | 0 or less = auto: 2 columns when scale ≤ 0.5, else 1 |
+| Behaviour | `BubbleSpacing` | 4 | Gap between cells in unscaled px. Negative = game default |
 | Behaviour | `MaxBubbleItems` | 4 | Cells per container, largest counts first |
 | Behaviour | `ShowBubbleCount` | false | Count number on cells (scaled font looks rough) |
-| Discovery | `FallbackRadius` | 12 | World units, used when not inside a zone |
+| Discovery | `FallbackRadius` | 12 | World units, used when not inside a container zone |
 | Discovery | `IncludeConveyorChests` | false | Treat conveyor chests as targets |
-
-## Diagnostics
-
-`F9` writes a dump (latest plus a timestamped copy per zone) with: player position and zone, every
-container in the zone and within radius with filters and contents, all container definitions, backpack and
-toolbelt contents, game key bindings and collisions with the configured keys, the dry-run stash plan with
-reasons for unmoved stacks, the stash gates, and the last bubble layout.
 
 ## How it works
 
-- Discovery: `PlayerData.CurrentWorldZoneData.MultiInventoryWgoDatas` (fallback `wgoDataList`), filtered by
-  `WGODef.inventorySize != 0 && OpenInMultiInventory`, deduplicated by inventory reference, sorted by
-  distance. Radius fallback scans `WorldData.Cache.wgoDataByUidCache`.
+- Discovery: `PlayerData.CurrentWorldZoneData.MultiInventoryWgoDatas` when the zone `IsContainer`, otherwise
+  the objects of the player's scene within `FallbackRadius` (`WorldData.Cache.wgoDataByUidCache`). Both are
+  filtered by `WGODef.inventorySize != 0 && OpenInMultiInventory`, hidden/temporary objects skipped, sorted
+  by distance and then deduplicated by inventory reference (nearest wins).
+- The hotkey is tested with `Input.GetKeyDown` + held modifiers (BepInEx's `KeyboardShortcut.IsDown` ignores
+  presses while any other key is held). The config file's last-write time is polled once a second and the
+  file is reloaded when it changed.
 - Move: `Inventory.TakeAllItemsExistingInMeFromOtherInventory(backpack, ignoreMyBags: true,
-  ignoreOtherBags: !IncludeBagContents)` per container. Item totals are checked before and after.
+  ignoreOtherBags: !IncludeBagContents)` per container. What each container received is read from a backpack
+  snapshot around its call and logged as one line:
+  `Stashed 7 items into 2 containers: chest<-blood x1, fat x2; firewood_shed<-firewood x4`, or
+  `Nothing to stash`.
 - Bubble: Harmony postfix on `Wgo.GetWidgetData()` appends a custom widget built at runtime from the game's
   `UICraftHintWidget` prefab (frame + `UIItemCell`, progress parts removed), registered in
-  `LazyWidgetPrefabContainer`.
+  `LazyWidgetPrefabContainer`. If that template cannot be built, one warning is logged and no bubble is shown.
