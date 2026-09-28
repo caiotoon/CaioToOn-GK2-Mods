@@ -45,6 +45,7 @@ These must hold after every change.
 | Controller chord names game actions, default `RightTrigger+LeftStick` | Same style as other GK2 mods. A chord avoids buttons the game or other mods already use |
 | Trigger in a prefix on `PlayerInputHandler.UpdateInput()` | The game calls it only while the player is free to act, and the press can be cleared before the game reads it |
 | Gates kept: window open, paused, input active, game loaded | Not implied by the trigger point: non-modal windows, windows excluded from pause bookkeeping, the bug report window, the main menu |
+| Gates run before the controller press is cleared | A press is only taken from the game when a stash actually runs |
 | What moved is read from a backpack snapshot around each call | The vanilla call does not report counts |
 | Bubble is a runtime clone of the `UICraftHintWidget` prefab | Same frame and cell as the workstation craft hint. Item icons come from `EasySpritesCollection`, which TextMeshPro sprite tags do not cover |
 | No fallback bubble | The template path works; on failure one warning is logged and no bubble is shown |
@@ -67,3 +68,7 @@ These must hold after every change.
 - An item moves only if the target already holds that exact id. Star quality is part of the id.
 - A widget that reads the chord's button in its own update, before the player code runs, can still see the
   press for one frame.
+- The stash does not fire with a seed or fertilizer in hand or while working at a station, because the
+  game is then in another player state. Accepted to keep a single trigger point.
+- Held buttons of a chord still perform their game action. `LeftTrigger` (L2) is Attack Focus, which leaves
+  the free state when a weapon is equipped, so a chord holding it cannot complete.

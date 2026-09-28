@@ -81,8 +81,10 @@ Read [AGENTS.md](AGENTS.md) first.
   cover a few HUD glyphs.
 - Controller input is Rewired behind `LazyInput`. A physical button raises every game action (`GameKey`)
   bound to it, and mods read `LazyInput.GetKeyDown(GameKey)` while `LazyInput.IsGamepadActive`. Controller
-  bindings cannot be changed in the game's settings. Raw button actions: `RightTrigger`, `LeftTrigger`,
-  `RightBumper`, `RightStick`, `LeftStick`, `DpadUp/Down/Left/Right`. There is no left bumper action.
+  bindings cannot be changed in the game's settings. Names to use per button (Sept 2026, read from the
+  game's binding asset): R2 `RightTrigger`, L2 `LeftTrigger`, R1 `NextTab`, L1 `PrevTab`, R3 `RightStick`,
+  L3 `LeftStick`, D-pad `DpadUp/Down/Left/Right`. `RightBumper` exists as a name but no button raises it.
+  A held button still performs its game action: L2 is Attack Focus, the D-pad uses hotbar items.
 - `PlayerInputHandler.UpdateInput()` is the gameplay input routine. The game calls it only while the player
   is free to act.
 
