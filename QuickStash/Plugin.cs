@@ -51,7 +51,7 @@ namespace QuickStash
                 "After a stash, show a bubble above each receiving container listing what went in (item icon + count).");
             BubbleSeconds = Config.Bind("Behaviour", "BubbleSeconds", 2f,
                 "How long the stash bubble stays visible (real seconds, unaffected by pause). Values <= 0 fall back to 2.");
-            BubbleScale = Config.Bind("Behaviour", "BubbleScale", 1f,
+            BubbleScale = Config.Bind("Behaviour", "BubbleScale", 0.5f,
                 "Size of each stash bubble cell relative to the workstation craft-hint bubble (1 = identical). Values <= 0 fall back to 1.");
             MaxBubbleItems = Config.Bind("Behaviour", "MaxBubbleItems", 4,
                 "Maximum number of item cells per container bubble (largest deliveries first). Values < 1 are treated as 1.");
