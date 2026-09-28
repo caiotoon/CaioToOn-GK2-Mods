@@ -4,81 +4,30 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>QuickStash</AssemblyName>
     <RootNamespace>QuickStash</RootNamespace>
-    <Version>0.7.0</Version>
+    <Version>0.8.0</Version>
     <Description>Graveyard Keeper 2: one key moves stackable backpack items into nearby containers that already hold them.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- BepInEx 5 -->
-    <Reference Include="BepInEx">
-      <HintPath>$(BepInExCoreDir)\BepInEx.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="0Harmony">
-      <HintPath>$(BepInExCoreDir)\0Harmony.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <Reference Include="BepInEx" HintPath="$(BepInExCoreDir)\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(BepInExCoreDir)\0Harmony.dll" Private="false" />
 
     <!-- Unity -->
-    <Reference Include="UnityEngine">
-      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.TextRenderingModule">
-      <HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.UI">
-      <HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.UIModule" Condition="Exists('$(ManagedDir)\UnityEngine.UIModule.dll')">
-      <HintPath>$(ManagedDir)\UnityEngine.UIModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <Reference Include="UnityEngine" HintPath="$(ManagedDir)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(ManagedDir)\UnityEngine.InputLegacyModule.dll" Private="false" />
+    <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(ManagedDir)\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(ManagedDir)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(ManagedDir)\UnityEngine.UIModule.dll" Private="false" />
 
-    <!-- Odin (base types of GameScene etc.) -->
-    <Reference Include="Sirenix.OdinInspector.Attributes">
-      <HintPath>$(ManagedDir)\Sirenix.OdinInspector.Attributes.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Sirenix.Serialization.AOTGenerated">
-      <HintPath>$(ManagedDir)\Sirenix.Serialization.AOTGenerated.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Sirenix.Serialization.Config">
-      <HintPath>$(ManagedDir)\Sirenix.Serialization.Config.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Sirenix.Serialization">
-      <HintPath>$(ManagedDir)\Sirenix.Serialization.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Sirenix.Utilities">
-      <HintPath>$(ManagedDir)\Sirenix.Utilities.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <!-- Odin: GameScene derives from SerializedMonoBehaviour -->
+    <Reference Include="Sirenix.Serialization" HintPath="$(ManagedDir)\Sirenix.Serialization.dll" Private="false" />
+
     <!-- Game -->
-    <Reference Include="Assembly-CSharp">
-      <HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>$(ManagedDir)\Assembly-CSharp-firstpass.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="LazyBearTechnology">
-      <HintPath>$(ManagedDir)\LazyBearTechnology.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <Reference Include="Assembly-CSharp" HintPath="$(ManagedDir)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ManagedDir)\Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="LazyBearTechnology" HintPath="$(ManagedDir)\LazyBearTechnology.dll" Private="false" />
   </ItemGroup>
 
 </Project>
