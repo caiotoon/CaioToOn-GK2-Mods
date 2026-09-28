@@ -15,24 +15,20 @@ namespace QuickStash
     /// </summary>
     internal static class StashInput
     {
-        private static string resolvedText;   // GamepadStash value the two fields below were resolved from
-        private static GameKey pressKey;      // null: controller stash is off
-        private static List<GameKey> holdKeys = new List<GameKey>();
+        private static string resolvedText;   // GamepadStash value the chord was resolved from
+        private static List<GameKey> chord;   // held actions, then the pressed one; null: controller stash is off
 
         [HarmonyPrefix, HarmonyPatch(typeof(PlayerInputHandler), nameof(PlayerInputHandler.UpdateInput))]
         private static void UpdateInputPrefix()
         {
             try
             {
-                if (IsKeyboardDown(Plugin.StashKey.Value))
-                {
-                    Plugin.TryStash();
-                }
-                else if (IsGamepadChordDown())
-                {
-                    SwallowPress();   // first, so a failing stash cannot leave the press to the game
-                    Plugin.TryStash();
-                }
+                bool keyboard = IsKeyboardDown(Plugin.StashKey.Value);
+                if (!keyboard && !IsGamepadChordDown()) return;
+                if (!Plugin.CanStash()) return;
+
+                if (!keyboard) SwallowPress();   // only a press that starts a stash is kept from the game
+                Plugin.Stash();
             }
             catch (Exception e) { Plugin.Log.LogError("Stash failed: " + e); }
         }
@@ -48,11 +44,12 @@ namespace QuickStash
 
         private static bool IsGamepadChordDown()
         {
-            if (!LazyInput.IsInitialized || !LazyInput.IsGamepadActive) return false;
+            if (!LazyInput.IsGamepadActive) return false;
             if (resolvedText != Plugin.GamepadStash.Value) Resolve(Plugin.GamepadStash.Value);
+            if (chord == null) return false;
 
-            // Enumeration's == returns false when either side is null, so null is tested on the reference
-            return (object)pressKey != null && LazyInput.GetKeyDown(pressKey) && holdKeys.All(LazyInput.GetKey);
+            int last = chord.Count - 1;
+            return LazyInput.GetKeyDown(chord[last]) && chord.Take(last).All(LazyInput.GetKey);
         }
 
         /// <summary>
@@ -62,7 +59,7 @@ namespace QuickStash
         private static void Resolve(string text)
         {
             resolvedText = text;
-            pressKey = null;
+            chord = null;
             if (string.IsNullOrWhiteSpace(text)) return;
 
             var keys = new List<GameKey>();
@@ -71,13 +68,13 @@ namespace QuickStash
                 string name = part.Trim();
                 FieldInfo field = typeof(GameKey).GetField(name, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
                 var key = field?.GetValue(null) as GameKey;
+                // Enumeration's == returns false when either side is null, so null is tested on the reference
                 if ((object)key == null) { Warn("'" + name + "' is not a game action"); return; }
                 if (key.value == GameKey.None.value) return;
                 if (!LazyInput.GameBindings.gamepadBindings.Any(b => b.gameKey.value == key.value)) { Warn("no controller button raises '" + name + "'"); return; }
                 keys.Add(key);
             }
-            pressKey = keys[keys.Count - 1];
-            holdKeys = keys.Take(keys.Count - 1).ToList();
+            chord = keys;
         }
 
         private static void Warn(string problem)
@@ -86,29 +83,19 @@ namespace QuickStash
         }
 
         /// <summary>
-        /// Keeps the game from reacting to the pressed button: every action raised by the same physical button (its other
-        /// bindings and their aliases) is cleared for this frame and ignored until release. Held keys are left alone.
+        /// Keeps the game from reacting to the pressed button: every action raised by the same physical button is
+        /// cleared for this frame and ignored until release. Held buttons are left alone.
         /// </summary>
         private static void SwallowPress()
         {
-            GameBindings bindings = LazyInput.GameBindings;
-            var buttons = new HashSet<int>();
-            foreach (GamepadBinding b in bindings.gamepadBindings)
-                if (b.gameKey.value == pressKey.value) buttons.Add(b.gamepadButton.value);
-
-            foreach (GamepadBinding b in bindings.gamepadBindings)
+            List<GamepadBinding> bindings = LazyInput.GameBindings.gamepadBindings;
+            GameKey pressed = chord[chord.Count - 1];
+            GamepadButton button = bindings.Find(b => b.gameKey.value == pressed.value).gamepadButton;
+            foreach (GamepadBinding b in bindings.Where(b => b.gamepadButton.value == button.value))
             {
-                if (!buttons.Contains(b.gamepadButton.value)) continue;
-                Ignore(b.gameKey);
-                foreach (BindingAlias alias in bindings.bindingAliases)
-                    if (alias.gameKey1.value == b.gameKey.value) Ignore(alias.gameKey2);
+                LazyInput.ClearKeyDown(b.gameKey);
+                LazyInput.WaitForRelease(b.gameKey);
             }
-        }
-
-        private static void Ignore(GameKey key)
-        {
-            LazyInput.ClearKeyDown(key);
-            LazyInput.WaitForRelease(key);
         }
     }
 }

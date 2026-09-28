@@ -1,8 +1,9 @@
 # QuickStash
 
-Press one key (default `G`, or hold R2 and press L3 on a controller) and every stackable item in your
-backpack that already exists in a nearby container is moved into that container. Same rule as the game's own "move all similar items" button in the
-chest window, applied to every container in the current zone without opening anything.
+Press `G`, or hold R2 and press L3 on a controller, and every stackable item in your backpack that already
+exists in a nearby container is moved into that container. Same rule as the game's own "move all similar
+items" button in the chest window, applied to every container in the current zone without opening anything.
+Both the key and the controller chord are configurable.
 
 - Source: backpack only, including items inside bags (farming bag etc.). Toolbelt, equipped gear and the
   carried overhead item are never touched.
@@ -15,8 +16,15 @@ chest window, applied to every container in the current zone without opening any
   showing the items that went in (same frame as the workstation craft hint).
 - Controller support: hold R2 and press L3 (left stick click). The chord is configurable, and the button
   press that completes it is not passed on to the game.
-- Never fires while a window is open, the game is paused, in the main menu, or while controls are disabled
-  (cutscenes, dialogs). Host only in co-op.
+- Host only in co-op.
+
+It does not fire while:
+
+- a window is open, the game is paused, or you are in the main menu,
+- controls are disabled (cutscenes, dialogs),
+- you are holding a seed or fertilizer (planting),
+- you are working at a station, on a ladder or in build mode,
+- you are in an attack or focus stance.
 
 ## Install
 
@@ -29,7 +37,7 @@ checked once a second while the game runs, so edits (key rebinds included) apply
 
 | Section | Key | Default | Meaning |
 |---|---|---|---|
-| Keys | `StashKey` | `G` | Stash hotkey (Unity KeyCode, modifiers allowed: `G + LeftShift`). Works while other keys are held, e.g. while walking |
+| Keys | `StashKey` | `G` | Stash hotkey (Unity KeyCode, modifiers allowed: `G + LeftControl`). Works while other keys are held, e.g. while walking |
 | Keys | `GamepadStash` | `RightTrigger+LeftStick` | Controller chord: game action names joined with `+`. The last one is pressed, the ones before it are held; a single name is allowed. `None` or empty disables |
 | Behaviour | `PlaySound` | true | Sounds on stash / nothing to stash |
 | Behaviour | `IncludeBagContents` | true | Also stash from bags inside the backpack |
@@ -49,13 +57,15 @@ Button names for `GamepadStash` (the same legend is written into the cfg file):
 |---|---|
 | R2 / RT, right trigger | `RightTrigger` |
 | L2 / LT, left trigger | `LeftTrigger` |
-| R1 / RB, right bumper | `RightBumper` |
+| R1 / RB, right bumper | `NextTab` |
+| L1 / LB, left bumper | `PrevTab` |
 | R3, right stick click | `RightStick` |
 | L3, left stick click | `LeftStick` |
 | D-pad | `DpadUp`, `DpadDown`, `DpadLeft`, `DpadRight` |
 
 Other buttons are named by the game action they perform, for example `Interaction`, `Action`, `Inventory`.
-Example: `RightTrigger+LeftStick` = hold R2, press L3.
+Held buttons still do their normal game action, so avoid `LeftTrigger` (L2) as a held button: it is Attack
+Focus. Example: `RightTrigger+LeftStick` = hold R2, press L3.
 
 ## How it works
 
@@ -67,8 +77,8 @@ Example: `RightTrigger+LeftStick` = hold R2, press L3.
   while the player is free to act (`SSM.CustomUpdate` -> `FreePlayerState.Update`, active only with controls
   enabled). Keyboard: `Input.GetKeyDown` + held modifiers (BepInEx's `KeyboardShortcut.IsDown` ignores presses
   while any other key is held). Controller: `LazyInput.GetKeyDown` on the last action of the chord while
-  `LazyInput.GetKey` holds for the others; then every action raised by the same physical button is cleared
-  and ignored until release, so the game does not react to it.
+  `LazyInput.GetKey` holds for the others. When the stash runs, every action raised by the same physical
+  button is cleared and ignored until release, so the game does not react to it.
 - The config file's last-write time is polled once a second and the file is reloaded when it changed.
 - Move: `Inventory.TakeAllItemsExistingInMeFromOtherInventory(backpack, ignoreMyBags: true,
   ignoreOtherBags: !IncludeBagContents)` per container. What each container received is read from a backpack
