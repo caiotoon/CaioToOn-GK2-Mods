@@ -12,7 +12,7 @@ Game: Graveyard Keeper 2 (`https://www.nexusmods.com/graveyardkeeper2`)
 | Brief overview (max 350 chars) | Press G to stash: every stackable item in your backpack, bags included, that a nearby container already holds is moved into it. No windows to open. A bubble above each chest shows what went in. Configurable key, bubble size and columns. Requires BepInEx 5. |
 | Detailed description | paste `description.bbcode` |
 | Tags | Gameplay, Quality of Life, Inventory, BepInEx |
-| Requirements | BepInEx for Graveyard Keeper 2 (mod 48) |
+| Requirements | Add BepInEx through the Nexus requirements field (not in the description) |
 
 ## File upload
 
