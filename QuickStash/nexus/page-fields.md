@@ -5,7 +5,7 @@ Game: Graveyard Keeper 2 (`https://www.nexusmods.com/graveyardkeeper2`)
 | Field | Value |
 |---|---|
 | Mod name | QuickStash |
-| Version | 0.8.0 |
+| Version | 0.9.0 |
 | Category | Gameplay (or "User Interface" if Gameplay is not offered) |
 | Language | English |
 | Author | caiotoon |
@@ -18,9 +18,9 @@ Game: Graveyard Keeper 2 (`https://www.nexusmods.com/graveyardkeeper2`)
 
 | Field | Value |
 |---|---|
-| File | `dist/QuickStash-0.8.0.zip` |
+| File | `dist/QuickStash-0.9.0.zip` |
 | File name | QuickStash |
-| File version | 0.8.0 |
+| File version | 0.9.0 |
 | Category | Main Files |
 | Description | Initial release. Extract into the game folder or install with Vortex. |
 | Vortex / mod manager download | enabled |
@@ -34,6 +34,9 @@ Game: Graveyard Keeper 2 (`https://www.nexusmods.com/graveyardkeeper2`)
 4. Optional: before/after of the backpack.
 
 ## Changelog
+
+### 0.9.0
+- Controller support: hold R2 and press L3, configurable.
 
 ### 0.8.0
 - Initial public release.

@@ -16,6 +16,7 @@ It is the game's own "move all similar items" chest button, applied to every con
 [*]A small bubble above each container shows what went in, in the same style as the workstation craft bubble.
 [*]Plays the item sound and shows "Stashed N items" on screen.
 [*]Works while you are walking.
+[*]Controller support: hold R2 and press L3 (configurable).
 [*]Settings apply while the game is running. No restart needed.
 [/list]
 [b]What it never touches[/b]
@@ -42,6 +43,7 @@ It is the game's own "move all similar items" chest button, applied to every con
 [code]Graveyard Keeper 2\BepInEx\config\com.caiotoon.gk2.quickstash.cfg[/code]
 [size=3][color=#D4D4D8][list]
 [*][b]StashKey[/b] (G): the hotkey. Modifiers are supported, for example [i]G + LeftShift[/i].
+[*][b]GamepadStash[/b] (RightTrigger+LeftStick): the controller chord. Button names joined with +; the last one is pressed, the ones before it are held. [i]None[/i] disables it.
 [*][b]IncludeBagContents[/b] (true): also stash items stored inside bags in the backpack.
 [*][b]PlaySound[/b] (true): sound on stash.
 [*][b]ShowBubbles[/b] (true): bubble above containers that received items.
@@ -53,11 +55,21 @@ It is the game's own "move all similar items" chest button, applied to every con
 [*][b]ShowBubbleCount[/b] (false): show the amount on each cell.
 [*][b]FallbackRadius[/b] (12): search radius used outside work zones.
 [*][b]IncludeConveyorChests[/b] (false): also stash into conveyor chests.
-[/list][/color][/size]
+[/list]
+[b]Button names for GamepadStash[/b]
+[list]
+[*]R2 / RT, right trigger: RightTrigger
+[*]L2 / LT, left trigger: LeftTrigger
+[*]R1 / RB, right bumper: RightBumper
+[*]R3, right stick click: RightStick
+[*]L3, left stick click: LeftStick
+[*]D-pad: DpadUp, DpadDown, DpadLeft, DpadRight
+[/list]
+Other buttons are named by the game action they perform, for example Interaction, Action, Inventory. Example: [i]RightTrigger+LeftStick[/i] means hold R2, press L3. The same list is written into the config file.[/color][/size]
 
 [size=4][b]Good to know[/b][/size]
 [size=3][color=#D4D4D8][list]
-[*]Keyboard only. G is not used by the game's default bindings.
+[*]Keyboard and controller. G is not used by the game's default bindings. On a controller, the button press that completes the chord is not passed on to the game.
 [*]An item only moves if the container already holds at least one of it. Star quality counts as a different item, as in the base game.
 [*]Safe to add or remove at any time. The mod stores nothing in your save.
 [*]No game files are replaced. Works alongside inventory size mods and other BepInEx plugins.

@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -15,11 +14,27 @@ namespace QuickStash
     {
         public const string PluginGuid = "com.caiotoon.gk2.quickstash";
         public const string PluginName = "QuickStash";
-        public const string PluginVersion = "0.8.0";
+        public const string PluginVersion = "0.9.0";
+
+        private const string GamepadStashHelp =
+            "Controller chord: names of the game's own actions joined with '+'. The last one must be pressed, the ones before it " +
+            "must be held. A single name is allowed. None or empty disables. Default: hold R2 and press L3 (left stick click).\n" +
+            "Buttons:\n" +
+            "  R2 / RT  right trigger      = RightTrigger\n" +
+            "  L2 / LT  left trigger       = LeftTrigger\n" +
+            "  R1 / RB  right bumper       = NextTab\n" +
+            "  L1 / LB  left bumper        = PrevTab\n" +
+            "  R3       right stick click  = RightStick\n" +
+            "  L3       left stick click   = LeftStick\n" +
+            "  D-pad                       = DpadUp, DpadDown, DpadLeft, DpadRight\n" +
+            "Other buttons are named by the game action they perform, for example Interaction, Action, Inventory.\n" +
+            "Held buttons still do their normal game action, so avoid LeftTrigger (L2) as a held button: it is Attack Focus.\n" +
+            "Example: RightTrigger+LeftStick = hold R2, press L3.";
 
         internal static ManualLogSource Log;
 
         internal static ConfigEntry<KeyboardShortcut> StashKey;
+        internal static ConfigEntry<string> GamepadStash;
         internal static ConfigEntry<bool> PlaySound;
         internal static ConfigEntry<bool> IncludeBagContents;
         internal static ConfigEntry<bool> ShowBubbles;
@@ -42,6 +57,7 @@ namespace QuickStash
 
             StashKey = Config.Bind("Keys", "StashKey", new KeyboardShortcut(KeyCode.G),
                 "Moves every stackable backpack item that already exists in a nearby container into that container (vanilla 'move all similar' per container).");
+            GamepadStash = Config.Bind("Keys", "GamepadStash", "RightTrigger+LeftStick", GamepadStashHelp);
 
             PlaySound = Config.Bind("Behaviour", "PlaySound", true,
                 "Play 'item_put' after a stash, 'gui_click' when nothing moved.");
@@ -67,28 +83,16 @@ namespace QuickStash
             IncludeConveyorChests = Config.Bind("Discovery", "IncludeConveyorChests", false,
                 "Treat conveyor chests (conveyorType Chest/ChestOut) as stash targets.");
 
-            Log.LogInfo("QuickStash loaded (stash key: " + StashKey.Value + ")");
-            Harmony.CreateAndPatchAll(typeof(StashBubbles), PluginGuid);
+            Log.LogInfo("QuickStash loaded (stash key: " + StashKey.Value + ", controller: " + GamepadStash.Value + ")");
+            var harmony = new Harmony(PluginGuid);
+            harmony.PatchAll(typeof(StashBubbles));
+            harmony.PatchAll(typeof(StashInput));
         }
 
         private void Update()
         {
             PollConfigReload();
             StashBubbles.Tick();
-
-            if (!IsShortcutDown(StashKey.Value)) return;
-
-            try { TryStash(); }
-            catch (Exception e) { Log.LogError("Stash failed: " + e); }
-        }
-
-        /// <summary>
-        /// BepInEx's KeyboardShortcut.IsDown() returns false while any unrelated key is held (e.g. W while walking),
-        /// so the shortcut is tested manually: main key just pressed and every modifier held.
-        /// </summary>
-        private static bool IsShortcutDown(KeyboardShortcut shortcut)
-        {
-            return shortcut.MainKey != KeyCode.None && Input.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(Input.GetKey);
         }
 
         private void PollConfigReload()
@@ -106,15 +110,8 @@ namespace QuickStash
             catch (IOException) { }   // file mid-write: the stamp is not stored, so the next poll retries
         }
 
-        private void TryStash()
+        internal static void Stash()
         {
-            if (!CanStash()) return;
-            if (LazyNetwork.IsInitialized && LazyNetwork.NetworkManager.IsCoopGame && !LazyNetwork.NetworkManager.IsHost)
-            {
-                Log.LogWarning("QuickStash only works for the host in co-op (inventory changes are not replicated from clients).");
-                return;
-            }
-
             PlayerData pd = MainGame.PlayerData;
             var targets = ContainerFinder.FindTargets(pd, FallbackRadius.Value, IncludeConveyorChests.Value);
             StashResult result = Stasher.Execute(pd.inventory, targets, IncludeBagContents.Value);
@@ -125,17 +122,15 @@ namespace QuickStash
             }
             Log.LogInfo(Stasher.Describe(result));
 
-            ShowFeedback(pd, result);
+            ShowFeedback(result);
         }
 
-        private static void ShowFeedback(PlayerData pd, StashResult result)
+        private static void ShowFeedback(StashResult result)
         {
             int moved = result.TotalItems;
             if (PlaySound.Value) LazyAudio.PlayAndForget(moved > 0 ? "item_put" : "gui_click");
             if (moved == 0) return;
 
-            // vanilla does this after UI item moves (InventoryUIItemMoveOpHandler.TryMoveItem)
-            if (pd.HasInteractingItem) pd.UpdateInteractingItem();
             // LLBase.L returns the key itself when it is unknown, so plain text works as the "locale"
             LazySingleton<UINotificator>.Instance.ShowSimpleTextNotification("Stashed " + moved + " item" + (moved == 1 ? "" : "s"));
 
@@ -148,15 +143,21 @@ namespace QuickStash
             catch (Exception e) { Log.LogWarning("Stash bubbles failed: " + e.Message); }
         }
 
-        /// <summary>Game loaded, controls enabled, not paused, input active, no window open.</summary>
-        private static bool CanStash()
+        /// <summary>
+        /// Called from PlayerInputHandler.UpdateInput, which the game only runs with controls enabled
+        /// (SSM.CustomUpdate, FreePlayerState.IsActive). The gates below are not implied by that.
+        /// </summary>
+        internal static bool CanStash()
         {
-            if (!IsGameLoaded()) return false;
-            if (!MainGame.PlayerController.IsControlsEnabled) return false;
-            if (MainGame.IsGamePaused) return false;
-            if (!LazyInput.IsInputActive()) return false;
-            // every shown LazyWindow is on the stack: only LazyWindow.ShowWindow / HideWindow change both
-            return LazyWindowsStackController.ActiveWindow == null && !LazyWindowsStackController.HasAnyModalWindowOpened;
+            if (!IsGameLoaded()) return false;               // the main menu never takes control from the player
+            if (MainGame.IsGamePaused) return false;         // fishing/credits windows skip the unpause, so a pause can outlive the taken control
+            if (!LazyInput.IsInputActive()) return false;    // while off, LazyInput keeps reporting the last presses
+            // only modal windows take control; every shown LazyWindow (modal or not) is on the stack
+            if (LazyWindowsStackController.ActiveWindow != null) return false;
+
+            bool coopClient = LazyNetwork.IsInitialized && LazyNetwork.NetworkManager.IsCoopGame && !LazyNetwork.NetworkManager.IsHost;
+            if (coopClient) Log.LogWarning("QuickStash only works for the host in co-op (inventory changes are not replicated from clients).");
+            return !coopClient;
         }
 
         /// <summary>MainGame.PlayerData survives GoToMainMenu; the player's current scene does not.</summary>
