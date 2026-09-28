@@ -27,7 +27,8 @@ Game: Graveyard Keeper 2 (`https://www.nexusmods.com/graveyardkeeper2`)
 
 ## Images (at least one is required)
 
-1. Bubble above a chest right after a stash (default scale).
+0. `images/banner.png`: header art with title (primary image).
+1. `images/shot-1-press-g.png`: bubble above a chest right after a stash.
 2. Two-column bubble at `BubbleScale = 0.5`.
 3. "Stashed N items" notification on screen.
 4. Optional: before/after of the backpack.
