@@ -1,0 +1,86 @@
+[size=5][b]QuickStash[/b][/size]
+
+Press [b]G[/b] and everything in your backpack that a nearby container already holds goes into that container. No windows, no dragging.
+
+It is the game's own "move all similar items" chest button, applied to every container in the area at once.
+
+[line]
+
+[size=4][b]What it does[/b][/size]
+[list]
+[*]Moves every stackable item from your backpack into nearby containers that already contain the same item. Nearest container first.
+[*]Items inside bags in your backpack (farming bag and so on) are included.
+[*]Shows a small bubble above each container with the items that went in, in the same style as the workstation craft bubble.
+[*]Plays the item sound and shows "Stashed N items" on screen.
+[*]Works while you are walking.
+[/list]
+
+[size=4][b]What it never touches[/b][/size]
+[list]
+[*]Your toolbelt and equipped gear.
+[*]The item you carry over your head.
+[*]Tools, weapons and the bags themselves. Only stackable items move.
+[*]Containers with item filters only receive what they accept (firewood sheds, wells, ore pallets...).
+[/list]
+
+[size=4][b]Which containers count as "nearby"[/b][/size]
+[list]
+[*]Inside a work zone: every storage container of that zone. These are the same containers the chest window lists as zone storage.
+[*]Anywhere else: storage containers within a configurable radius around you.
+[/list]
+
+[size=4][b]It will not fire while[/b][/size]
+[list]
+[*]a window is open (chest, inventory, menus),
+[*]the game is paused,
+[*]your controls are disabled (cutscenes, dialogs).
+[/list]
+
+[line]
+
+[size=4][b]Requirements[/b][/size]
+[list]
+[*][url=https://www.nexusmods.com/graveyardkeeper2/mods/48]BepInEx for Graveyard Keeper 2[/url] (BepInEx 5)
+[/list]
+
+[size=4][b]Installation[/b][/size]
+[b]Vortex:[/b] use the "Mod Manager Download" button, enable, deploy.
+[b]Manual:[/b] extract the archive into the game folder so that the file ends up at
+[code]Graveyard Keeper 2\BepInEx\plugins\QuickStash\QuickStash.dll[/code]
+
+[size=4][b]Configuration[/b][/size]
+Run the game once, then edit
+[code]Graveyard Keeper 2\BepInEx\config\com.caiotoon.gk2.quickstash.cfg[/code]
+Changes apply within a second while the game is running. No restart needed.
+
+[list]
+[*][b]StashKey[/b] (G): the hotkey. Modifiers are supported, for example [i]G + LeftShift[/i].
+[*][b]IncludeBagContents[/b] (true): also stash items stored inside bags in the backpack.
+[*][b]PlaySound[/b] (true): sound on stash.
+[*][b]ShowBubbles[/b] (true): bubble above containers that received items.
+[*][b]BubbleSeconds[/b] (2): how long the bubble stays.
+[*][b]BubbleScale[/b] (1): bubble size. 1 is the size of the craft bubble.
+[*][b]BubbleColumns[/b] (0): cells per row. 0 picks 2 columns when the scale is 0.5 or lower, else 1.
+[*][b]BubbleSpacing[/b] (-1): gap between cells. Negative uses the game's own spacing.
+[*][b]MaxBubbleItems[/b] (4): how many items a bubble shows, largest stacks first.
+[*][b]ShowBubbleCount[/b] (false): show the amount on each cell.
+[*][b]FallbackRadius[/b] (12): search radius used outside work zones.
+[*][b]IncludeConveyorChests[/b] (false): also stash into conveyor chests.
+[/list]
+
+[line]
+
+[size=4][b]Good to know[/b][/size]
+[list]
+[*]Keyboard only. G is not used by the game's default bindings.
+[*]An item only moves if the container already holds at least one of it. Star quality counts as a different item, as in the base game.
+[*]Safe to add or remove at any time. The mod stores nothing in your save.
+[*]Co-op: if the game ever enables it, the hotkey only works for the host.
+[/list]
+
+[size=4][b]Compatibility[/b][/size]
+No game files are replaced. One small patch adds the bubble to the game's object bubbles. Inventory size mods and other BepInEx plugins should work alongside it.
+
+[size=4][b]Source code[/b][/size]
+[url=https://github.com/caiotoon/CaioToOn-GK2-Mods]github.com/caiotoon/CaioToOn-GK2-Mods[/url]
+Bug reports and suggestions are welcome here in the comments or as GitHub issues.
