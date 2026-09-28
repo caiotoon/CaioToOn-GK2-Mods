@@ -1,0 +1,75 @@
+[size=4][b]Description[/b][/size]
+[size=3][color=#D4D4D8]Press [b]G[/b] and everything in your backpack that a nearby container already holds goes into that container. No windows, no dragging.
+
+It is the game's own "move all similar items" chest button, applied to every container in the area at once.[/color][/size]
+
+[size=4][b]Installation instructions[/b][/size]
+[size=3][color=#D4D4D8][b]Vortex:[/b] click "Mod Manager Download", enable the mod, deploy.
+
+[b]Manual:[/b] extract the archive into the game folder so the file ends up at:[/color][/size]
+[code]Graveyard Keeper 2\BepInEx\plugins\QuickStash\QuickStash.dll[/code]
+
+[size=4][b]Main features[/b][/size]
+[size=3][color=#D4D4D8][list]
+[*]Moves every stackable item from your backpack into nearby containers that already contain the same item. Nearest container first.
+[*]Items inside bags in your backpack (farming bag and so on) are included.
+[*]A small bubble above each container shows what went in, in the same style as the workstation craft bubble.
+[*]Plays the item sound and shows "Stashed N items" on screen.
+[*]Works while you are walking.
+[*]Settings apply while the game is running. No restart needed.
+[/list]
+[b]What it never touches[/b]
+[list]
+[*]Your toolbelt and equipped gear.
+[*]The item you carry over your head.
+[*]Tools, weapons and the bags themselves. Only stackable items move.
+[*]Special containers such as firewood sheds, wells and ore pallets only receive the items they accept. Regular chests take anything.
+[/list]
+[b]Which containers count as nearby[/b]
+[list]
+[*]Inside a work zone: every storage container of that zone. These are the same containers the chest window lists as zone storage.
+[*]Anywhere else: storage containers within a configurable radius around you.
+[/list]
+[b]It will not fire while[/b]
+[list]
+[*]a window is open (chest, inventory, menus),
+[*]the game is paused,
+[*]your controls are disabled (cutscenes, dialogs).
+[/list][/color][/size]
+
+[size=4][b]Configuration[/b][/size]
+[size=3][color=#D4D4D8]Run the game once, then edit:[/color][/size]
+[code]Graveyard Keeper 2\BepInEx\config\com.caiotoon.gk2.quickstash.cfg[/code]
+[size=3][color=#D4D4D8][list]
+[*][b]StashKey[/b] (G): the hotkey. Modifiers are supported, for example [i]G + LeftShift[/i].
+[*][b]IncludeBagContents[/b] (true): also stash items stored inside bags in the backpack.
+[*][b]PlaySound[/b] (true): sound on stash.
+[*][b]ShowBubbles[/b] (true): bubble above containers that received items.
+[*][b]BubbleSeconds[/b] (2): how long the bubble stays.
+[*][b]BubbleScale[/b] (0.6): bubble size. 1 is the size of the craft bubble.
+[*][b]BubbleColumns[/b] (2): cells per row. 0 picks automatically: 2 columns when the scale is 0.5 or lower, else 1.
+[*][b]BubbleSpacing[/b] (4): gap between cells, multiplied by the scale.
+[*][b]MaxBubbleItems[/b] (4): how many items a bubble shows, largest stacks first.
+[*][b]ShowBubbleCount[/b] (false): show the amount on each cell.
+[*][b]FallbackRadius[/b] (12): search radius used outside work zones.
+[*][b]IncludeConveyorChests[/b] (false): also stash into conveyor chests.
+[/list][/color][/size]
+
+[size=4][b]Good to know[/b][/size]
+[size=3][color=#D4D4D8][list]
+[*]Keyboard only. G is not used by the game's default bindings.
+[*]An item only moves if the container already holds at least one of it. Star quality counts as a different item, as in the base game.
+[*]Safe to add or remove at any time. The mod stores nothing in your save.
+[*]No game files are replaced. Works alongside inventory size mods and other BepInEx plugins.
+[/list][/color][/size]
+
+[size=4][b]Source code[/b][/size]
+[size=3][color=#D4D4D8][url=https://github.com/caiotoon/CaioToOn-GK2-Mods]github.com/caiotoon/CaioToOn-GK2-Mods[/url]
+Bug reports and suggestions are welcome in the comments or as GitHub issues.[/color][/size]
+
+[size=4][b]Shout outs[/b][/size]
+[size=3][color=#D4D4D8][list]
+[*]Lazy Bear Games, for the game.
+[*]The BepInEx and HarmonyX teams, for the modding framework.
+[*]The ILSpy team, for the decompiler.
+[/list][/color][/size]

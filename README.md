@@ -11,6 +11,7 @@ builds to its own plugin folder.
 
 ```
 Directory.Build.props   shared MSBuild props: GameDir, ManagedDir, BepInExDir, compiler settings
+Directory.Build.targets shared build steps: zip package into dist/, optional direct deploy
 GraveyardKeeper2Mods.sln
 tools/decompile.ps1     regenerates decompiled/ (git-ignored) from the game assemblies with ilspycmd
 <Mod>/<Mod>.csproj      one project per mod; post-build copies the DLL to <game>\BepInEx\plugins\<Mod>\
@@ -35,8 +36,25 @@ If the game is not in the default Steam folder, pass the path:
 dotnet build -c Release -p:GameDir="D:\Games\Graveyard Keeper 2"
 ```
 
-Each build copies the plugin into `$(GameDir)\BepInEx\plugins\<Mod>\`. Close the game first if the copy
-reports the DLL is in use.
+Each build writes `dist\<Mod>-<Version>.zip`, laid out from the game root
+(`BepInEx\plugins\<Mod>\<Mod>.dll`).
+
+### Install with Vortex
+
+Mods tab → **Install From File** → pick `dist\<Mod>-<Version>.zip` → Enable → Deploy. To update, install
+the new zip and choose "Replace".
+
+### Direct deploy (no Vortex)
+
+```powershell
+dotnet build -c Release -p:DeployToGame=true
+```
+
+copies the DLL straight into `$(GameDir)\BepInEx\plugins\<Mod>\`. Close the game first if the copy reports
+the DLL is in use.
+
+If BepInEx is not deployed in the game folder at build time, point the compiler at any copy of its `core`
+folder: `-p:BepInExCoreDir="<path>\BepInEx\core"`.
 
 ## Adding a mod
 

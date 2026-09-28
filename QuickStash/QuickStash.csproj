@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>QuickStash</AssemblyName>
+    <RootNamespace>QuickStash</RootNamespace>
+    <Version>0.8.0</Version>
+    <Description>Graveyard Keeper 2: one key moves stackable backpack items into nearby containers that already hold them.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BepInEx 5 -->
+    <Reference Include="BepInEx" HintPath="$(BepInExCoreDir)\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(BepInExCoreDir)\0Harmony.dll" Private="false" />
+
+    <!-- Unity -->
+    <Reference Include="UnityEngine" HintPath="$(ManagedDir)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(ManagedDir)\UnityEngine.InputLegacyModule.dll" Private="false" />
+    <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(ManagedDir)\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(ManagedDir)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(ManagedDir)\UnityEngine.UIModule.dll" Private="false" />
+
+    <!-- Odin: GameScene derives from SerializedMonoBehaviour -->
+    <Reference Include="Sirenix.Serialization" HintPath="$(ManagedDir)\Sirenix.Serialization.dll" Private="false" />
+
+    <!-- Game -->
+    <Reference Include="Assembly-CSharp" HintPath="$(ManagedDir)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ManagedDir)\Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="LazyBearTechnology" HintPath="$(ManagedDir)\LazyBearTechnology.dll" Private="false" />
+  </ItemGroup>
+
+</Project>
