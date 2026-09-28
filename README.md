@@ -71,3 +71,7 @@ folder: `-p:BepInExCoreDir="<path>\BepInEx\core"`.
   chest window shows as zone storage.
 - Item icons come from `EasySpritesCollection.GetSprite(ItemDef.iconId)`; TextMeshPro sprite tags only
   cover a few HUD glyphs.
+
+## License
+
+[MIT](LICENSE). Graveyard Keeper 2 and its assets belong to Lazy Bear Games; this repository contains no game code or assets apart from screenshots used for the mod page.
