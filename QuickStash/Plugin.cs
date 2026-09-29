@@ -14,7 +14,7 @@ namespace QuickStash
     {
         public const string PluginGuid = "com.caiotoon.gk2.quickstash";
         public const string PluginName = "QuickStash";
-        public const string PluginVersion = "0.9.0";
+        public const string PluginVersion = "0.10.0";
 
         private const string GamepadStashHelp =
             "Controller chord: names of the game's own actions joined with '+'. The last one must be pressed, the ones before it " +
@@ -37,6 +37,7 @@ namespace QuickStash
         internal static ConfigEntry<string> GamepadStash;
         internal static ConfigEntry<bool> PlaySound;
         internal static ConfigEntry<bool> IncludeBagContents;
+        internal static ConfigEntry<bool> KeepHotbarItems;
         internal static ConfigEntry<bool> ShowBubbles;
         internal static ConfigEntry<float> BubbleSeconds;
         internal static ConfigEntry<float> BubbleScale;
@@ -63,6 +64,8 @@ namespace QuickStash
                 "Play 'item_put' after a stash, 'gui_click' when nothing moved.");
             IncludeBagContents = Config.Bind("Behaviour", "IncludeBagContents", true,
                 "Also stash stackables stored inside bags in the backpack (e.g. the farming bag). Items are never put into bags inside containers.");
+            KeepHotbarItems = Config.Bind("Behaviour", "KeepHotbarItems", true,
+                "Items pinned to the hotbar stay in your backpack. Turn off to stash them like any other item.");
             ShowBubbles = Config.Bind("Behaviour", "ShowBubbles", true,
                 "After a stash, show a bubble above each receiving container listing what went in (item icon + count).");
             BubbleSeconds = Config.Bind("Behaviour", "BubbleSeconds", 2f,
@@ -87,6 +90,7 @@ namespace QuickStash
             var harmony = new Harmony(PluginGuid);
             harmony.PatchAll(typeof(StashBubbles));
             harmony.PatchAll(typeof(StashInput));
+            Stasher.PatchKeepFilter(harmony);
         }
 
         private void Update()
@@ -114,7 +118,7 @@ namespace QuickStash
         {
             PlayerData pd = MainGame.PlayerData;
             var targets = ContainerFinder.FindTargets(pd, FallbackRadius.Value, IncludeConveyorChests.Value);
-            StashResult result = Stasher.Execute(pd.inventory, targets, IncludeBagContents.Value);
+            StashResult result = Stasher.Execute(pd.inventory, targets, IncludeBagContents.Value, KeepHotbarItems.Value ? pd.pinnedItems : null);
             if (result.AbortReason != null)
             {
                 Log.LogWarning("Stash aborted: " + result.AbortReason);

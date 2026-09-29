@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using HarmonyLib;
 
 namespace QuickStash
 {
@@ -29,8 +31,32 @@ namespace QuickStash
     /// </summary>
     internal static class Stasher
     {
+        // Item ids the vanilla call must leave in the backpack; only set while Execute runs, so the chest window is unaffected
+        private static string[] keepIds;
+
+        /// <summary>
+        /// Hides <see cref="keepIds"/> from the container's id set (private <c>Item.CollectUniqueItemIds</c>, Item.cs ~1061), which the
+        /// vanilla move loop checks before moving a stack. If a game update removes the method, the patch is skipped and every id moves.
+        /// </summary>
+        public static void PatchKeepFilter(Harmony harmony)
+        {
+            MethodInfo target = AccessTools.Method(typeof(Item), "CollectUniqueItemIds", new[] { typeof(bool) });
+            if (target == null || target.ReturnType != typeof(HashSet<string>))
+            {
+                Plugin.Log.LogWarning("Item.CollectUniqueItemIds not found: hotbar items will not be kept out of the stash.");
+                return;
+            }
+            harmony.Patch(target, postfix: new HarmonyMethod(typeof(Stasher), nameof(HideKeptIds)));
+        }
+
+        private static void HideKeptIds(HashSet<string> __result)
+        {
+            if (keepIds == null) return;
+            foreach (string id in keepIds) __result.Remove(id);
+        }
+
         /// <summary>One vanilla call per target, in the given (distance) order. Deliveries are derived from a backpack id->count snapshot around each call.</summary>
-        public static StashResult Execute(Inventory backpack, List<WgoData> targets, bool includeBagContents)
+        public static StashResult Execute(Inventory backpack, List<WgoData> targets, bool includeBagContents, string[] keep)
         {
             var result = new StashResult();
 
@@ -43,19 +69,27 @@ namespace QuickStash
                 return result;
             }
 
-            foreach (WgoData target in targets)
+            keepIds = keep;
+            try
             {
-                var before = CountById(backpack, includeBagContents);
-                target.Inventory.TakeAllItemsExistingInMeFromOtherInventory(backpack, ignoreMyBags: true, ignoreOtherBags: !includeBagContents);
-                var after = CountById(backpack, includeBagContents);
-
-                var delivery = new Delivery { Container = target };
-                foreach (var kv in before)
+                foreach (WgoData target in targets)
                 {
-                    after.TryGetValue(kv.Key, out int left);
-                    if (kv.Value > left) delivery.Items[kv.Key] = kv.Value - left;
+                    var before = CountById(backpack, includeBagContents);
+                    target.Inventory.TakeAllItemsExistingInMeFromOtherInventory(backpack, ignoreMyBags: true, ignoreOtherBags: !includeBagContents);
+                    var after = CountById(backpack, includeBagContents);
+
+                    var delivery = new Delivery { Container = target };
+                    foreach (var kv in before)
+                    {
+                        after.TryGetValue(kv.Key, out int left);
+                        if (kv.Value > left) delivery.Items[kv.Key] = kv.Value - left;
+                    }
+                    if (delivery.Items.Count > 0) result.Deliveries.Add(delivery);
                 }
-                if (delivery.Items.Count > 0) result.Deliveries.Add(delivery);
+            }
+            finally
+            {
+                keepIds = null;
             }
             return result;
         }

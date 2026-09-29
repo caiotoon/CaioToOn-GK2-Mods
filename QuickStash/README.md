@@ -7,6 +7,7 @@ Both the key and the controller chord are configurable.
 
 - Source: backpack only, including items inside bags (farming bag etc.). Toolbelt, equipped gear and the
   carried overhead item are never touched.
+- Items pinned to the hotbar stay in the backpack (`KeepHotbarItems`, on by default).
 - Targets: containers in the player's current world zone (what the chest window lists as storage), nearest
   first. When not inside a container zone (no zone, or a zone of type SimpleNotContainer), containers within
   `FallbackRadius` are used.
@@ -41,6 +42,7 @@ checked once a second while the game runs, so edits (key rebinds included) apply
 | Keys | `GamepadStash` | `RightTrigger+LeftStick` | Controller chord: game action names joined with `+`. The last one is pressed, the ones before it are held; a single name is allowed. `None` or empty disables |
 | Behaviour | `PlaySound` | true | Sounds on stash / nothing to stash |
 | Behaviour | `IncludeBagContents` | true | Also stash from bags inside the backpack |
+| Behaviour | `KeepHotbarItems` | true | Items pinned to the hotbar stay in the backpack |
 | Behaviour | `ShowBubbles` | true | Bubble above receiving containers |
 | Behaviour | `BubbleSeconds` | 2 | Bubble duration in real seconds |
 | Behaviour | `BubbleScale` | 0.6 | 1 = craft-hint size |

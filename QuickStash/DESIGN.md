@@ -25,6 +25,8 @@ These must hold after every change.
 
 - The source is the backpack (`PlayerData.inventory`), with bag contents when `IncludeBagContents` is on.
   The toolbelt, equipped gear and the carried overhead item are never touched.
+- Items pinned to the hotbar (`PlayerData.pinnedItems`) are not moved while `KeepHotbarItems` is on.
+- The chest window's own "move all similar" button behaves exactly as vanilla.
 - Only stackable items move, and only into a container that already holds the same item id.
 - Nothing fires while a window is open, while the game is paused, in the main menu, or while the player is
   not free to act (cutscenes, dialogs, work, ladder, build, planting, attack).
@@ -46,6 +48,8 @@ These must hold after every change.
 | Trigger in a prefix on `PlayerInputHandler.UpdateInput()` | The game calls it only while the player is free to act, and the press can be cleared before the game reads it |
 | Gates kept: window open, paused, input active, game loaded | Not implied by the trigger point: non-modal windows, windows excluded from pause bookkeeping, the bug report window, the main menu |
 | Gates run before the controller press is cleared | A press is only taken from the game when a stash actually runs |
+| Hotbar items kept by a postfix on private `Item.CollectUniqueItemIds` that removes the pinned ids | The vanilla loop moves an id only when that set holds it, so the game still does all the moving. The postfix acts only while a stash runs (a static field set and cleared in `finally`), so other callers see vanilla results |
+| Missing `CollectUniqueItemIds` logs one warning and skips the patch | The stash keeps working; pinned items then move like any other item |
 | What moved is read from a backpack snapshot around each call | The vanilla call does not report counts |
 | Bubble is a runtime clone of the `UICraftHintWidget` prefab | Same frame and cell as the workstation craft hint. Item icons come from `EasySpritesCollection`, which TextMeshPro sprite tags do not cover |
 | No fallback bubble | The template path works; on failure one warning is logged and no bubble is shown |
@@ -58,7 +62,8 @@ These must hold after every change.
 - Reflection: private fields of `UICraftHintWidget` (`craftResultItem`, `progessCellContainer`,
   `progressBarWidget`, `zombieProgressBar`, `layoutElement`, `canvasGroup`, `defaultLayoutSize`,
   `completionProgressCellsParent`) and `LazyWidgetPrefabContainer.widgets`.
-- Patched methods: `Wgo.GetWidgetData()` and `PlayerInputHandler.UpdateInput()`.
+- Patched methods: `Wgo.GetWidgetData()`, `PlayerInputHandler.UpdateInput()` and the private
+  `Item.CollectUniqueItemIds(bool)`. Read field: `PlayerData.pinnedItems`.
 - Game action names used by the default chord: `RightTrigger`, `LeftStick`.
 - The reasoning for each removed gate depends on `FreePlayerState.IsActive`, `SSM.CustomUpdate` and
   `LazyWindowsStackController`.
@@ -66,6 +71,7 @@ These must hold after every change.
 ## Known limits
 
 - An item moves only if the target already holds that exact id. Star quality is part of the id.
+- A hotbar item is kept by its exact id, as the game's hotbar counts it (`UIHotBarWidget.cs:89`).
 - A widget that reads the chord's button in its own update, before the player code runs, can still see the
   press for one frame.
 - The stash does not fire with a seed or fertilizer in hand or while working at a station, because the

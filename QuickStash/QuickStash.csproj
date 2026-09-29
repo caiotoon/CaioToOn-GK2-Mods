@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>QuickStash</AssemblyName>
     <RootNamespace>QuickStash</RootNamespace>
-    <Version>0.9.0</Version>
+    <Version>0.10.0</Version>
     <Description>Graveyard Keeper 2: one key moves stackable backpack items into nearby containers that already hold them.</Description>
   </PropertyGroup>
 
