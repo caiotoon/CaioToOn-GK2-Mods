@@ -42,7 +42,8 @@ dotnet build -c Release -p:GameDir="D:\Games\Graveyard Keeper 2"
 ```
 
 Each build writes `dist\<Mod>-<Version>.zip`, laid out from the game root
-(`BepInEx\plugins\<Mod>\<Mod>.dll`).
+(`BepInEx\plugins\<Mod>\<Mod>.dll`), plus `<Mod>-INSTALL.txt` for players installing by hand (from
+`ManualInstall.txt`).
 
 ### Install with Vortex
 

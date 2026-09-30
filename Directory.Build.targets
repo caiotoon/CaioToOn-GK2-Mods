@@ -6,10 +6,13 @@
     <PluginSubDir>BepInEx\plugins\$(AssemblyName)</PluginSubDir>
   </PropertyGroup>
 
-  <!-- Vortex / Nexus package: dist\<Mod>-<Version>.zip containing BepInEx\plugins\<Mod>\<Mod>.dll -->
+  <!-- Vortex / Nexus / Workshop package: dist\<Mod>-<Version>.zip containing BepInEx\plugins\<Mod>\<Mod>.dll
+       and <Mod>-INSTALL.txt (ManualInstall.txt with the mod name filled in) -->
   <Target Name="PackageMod" AfterTargets="Build">
     <RemoveDir Directories="$(PackageStageDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageStageDir)$(PluginSubDir)" />
+    <WriteLinesToFile File="$(PackageStageDir)$(AssemblyName)-INSTALL.txt"
+                      Lines="$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)ManualInstall.txt').Replace('&lt;Mod&gt;', '$(AssemblyName)'))" />
     <MakeDir Directories="$(DistDir)" />
     <ZipDirectory SourceDirectory="$(PackageStageDir)" DestinationFile="$(DistDir)$(AssemblyName)-$(Version).zip" Overwrite="true" />
     <Message Importance="high" Text="$(AssemblyName) -> $(DistDir)$(AssemblyName)-$(Version).zip" />
