@@ -1,0 +1,10 @@
+Manual install (without Vortex or a Workshop loader)
+
+1. Install BepInEx 5 (x64, 5.4.23 or newer) into the Graveyard Keeper 2 folder:
+   https://github.com/BepInEx/BepInEx/releases
+   Extract it next to GraveyardKeeper2.exe, start the game once, then close it.
+2. Copy the "BepInEx" folder from this package into the game folder and merge it with the existing one.
+   The mod ends up in <game>\BepInEx\plugins\<Mod>\.
+3. Start the game. The settings file appears in <game>\BepInEx\config\ after the first start.
+
+To uninstall, delete <game>\BepInEx\plugins\<Mod>\.
