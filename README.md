@@ -6,6 +6,7 @@ builds to its own plugin folder.
 | Mod | What it does | Default key |
 |---|---|---|
 | [QuickStash](QuickStash/README.md) | One key moves stackable backpack items into nearby containers that already hold them | `G`, gamepad `R2 + L3` |
+| [Poop Scoop](PoopScoop/README.md) | Right-click a fertilizer slot on an empty garden bed to take the fertilizer back | Right-click, gamepad `ItemMove` |
 
 ## Layout
 

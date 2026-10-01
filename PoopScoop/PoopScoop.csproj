@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>PoopScoop</AssemblyName>
+    <RootNamespace>PoopScoop</RootNamespace>
+    <Version>0.1.0</Version>
+    <Description>Graveyard Keeper 2: right-click a fertilizer slot on an empty garden bed to take the fertilizer back.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BepInEx 5 -->
+    <Reference Include="BepInEx" HintPath="$(BepInExCoreDir)\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(BepInExCoreDir)\0Harmony.dll" Private="false" />
+
+    <!-- Unity -->
+    <Reference Include="UnityEngine" HintPath="$(ManagedDir)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+
+    <!-- Game -->
+    <Reference Include="Assembly-CSharp" HintPath="$(ManagedDir)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="LazyBearTechnology" HintPath="$(ManagedDir)\LazyBearTechnology.dll" Private="false" />
+  </ItemGroup>
+
+</Project>
